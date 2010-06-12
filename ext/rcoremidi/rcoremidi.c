@@ -6,12 +6,11 @@ VALUE rb_cSource;
 VALUE rb_cEndpoint;
 VALUE rb_cClient;
 VALUE rb_cPort;
-
+VALUE rb_cMidiQueue;
 
 void
 Init_rcoremidi()
 {
-	printProofTwo();
     rb_mRCOREMIDI = rb_define_module("RCoreMidi");
     
     /*
@@ -42,11 +41,21 @@ Init_rcoremidi()
     rb_cSource = rb_define_class_under(rb_mRCOREMIDI, "Source", rb_cObject);
     rb_define_method(rb_cSource, "initialize", source_init, 2);
     rb_define_attr(rb_cSource, "data", 1, 0);
+
+	/*
+	* RCoreMidi::MidiQueue
+	*/
+	rb_cMidiQueue = rb_define_class_under(rb_mRCOREMIDI, "MidiQueue", rb_cObject);
+	rb_define_method(rb_cMidiQueue, "initialize", init_midi_queue, 0);
+    rb_define_attr(rb_cMidiQueue, "queue", 1, 1);
     /*
     * RCoreMidi::Source
     */
-        rb_cConectionManager = rb_define_class_under(rb_mRCOREMIDI, "ConectionManager", rb_cObject);
+    rb_cConectionManager = rb_define_class_under(rb_mRCOREMIDI, "ConectionManager", rb_cObject);
     rb_define_singleton_method(rb_cConectionManager, "devices", get_devices,0);
+	
+
+
 
   /* nothing here yet */
     printf("extension rcoremidi got loaded!\n"); /* TODO: remove me */

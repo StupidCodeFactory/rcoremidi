@@ -9,7 +9,7 @@ class TestRcoremidiExtn < Test::Unit::TestCase
   end
   
   def test_can_return_array_of_sources
-    puts @conn_manager.inspect
+    # puts @conn_manager.inspect
     assert_instance_of Hash, @conn_manager, "Wrong class instance" 
   end
   
@@ -61,13 +61,16 @@ class TestRcoremidiExtn < Test::Unit::TestCase
     assert_nil client.source
   end
 
-  def test_client_connect_source
-    client = RCoreMidi::Client.new("nfor_connection")
-    client.connect_to(@conn_manager[1])
-    trap("INT") {
-      puts "EXiting"
-      exit 1
-    }
+  # def test_client_connect_source
+  #   client = RCoreMidi::Client.new("nfor_connection")
+  #   client.connect_to(@conn_manager[1])
+  # end
+  
+  
+  def test_can_instanciate_MidiQueue
+      queue = RCoreMidi::MidiQueue.new
+      puts queue.inspect
+      assert_not_nil queue
   end
   
   # def test_assert_create_port

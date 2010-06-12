@@ -38,6 +38,7 @@ VALUE client_init(int argc, VALUE *argv, VALUE self)
     VALUE in_port;
     VALUE out_port;
     VALUE client_ref;
+	VALUE queue;
     rb_scan_args(argc, argv, "1", &name);
 
     
@@ -72,14 +73,9 @@ VALUE client_init(int argc, VALUE *argv, VALUE self)
     MIDIPortRef *in;
     MIDIPortRef *out;    
 
-    printf("\tBEFORE in%p\n", in);
     Data_Get_Struct(in_obj,MIDIPortRef,in);
-    printf("\t\tAFTER in%p\n", in);
 
-
-    printf("\tBEFORE out%p\n", out);
     Data_Get_Struct(out_obj,MIDIPortRef,out);
-    printf("\tAFTER out%p\n", out);
 
     created = MIDIInputPortCreate(client, CFSTR("input") , MidiReadProc, NULL, in);
 
@@ -103,6 +99,9 @@ VALUE client_init(int argc, VALUE *argv, VALUE self)
     rb_iv_set(self, "@source", Qnil);
 
     CFRelease(cName);
+
+	queue = rb_funcall(rb_cMidiQueue, rb_intern("new"), 0);
+	rb_iv_set(self, "@queue", queue);
 
     return self;
 }
@@ -152,17 +151,11 @@ VALUE connect_to(VALUE self, VALUE source)
     MIDIEndpointRef *endpoint_ref;
 
     OSStatus connected;
-    printf("\tBEFORE%p\n", endpoint_ref);
     Data_Get_Struct(endpoint, MIDIEndpointRef, endpoint_ref);
-    printf("\tAFTER%p\n", endpoint_ref);
 
-    printf("\tBEFORE%p\n", in);
     Data_Get_Struct(in_obj, MIDIPortRef, in);
-    printf("\t\tAFTER%p\n", in);
 
-    printf("\tBEFORE%p\n", out);
     Data_Get_Struct(out_obj, MIDIPortRef, out);
-    printf("\tAFTER%p\n", out);
     
     connected = MIDIPortConnectSource(*in, *endpoint_ref, NULL);
     if (connected != noErr) {
