@@ -7,6 +7,7 @@ VALUE rb_cEndpoint;
 VALUE rb_cClient;
 VALUE rb_cPort;
 VALUE rb_cMidiQueue;
+VALUE rb_cMidiPacket;
 
 void
 Init_rcoremidi()
@@ -41,6 +42,8 @@ Init_rcoremidi()
     rb_cSource = rb_define_class_under(rb_mRCOREMIDI, "Source", rb_cObject);
     rb_define_method(rb_cSource, "initialize", source_init, 2);
     rb_define_attr(rb_cSource, "data", 1, 0);
+
+	rb_cMidiPacket = rb_define_class_under(rb_mRCOREMIDI, "MidiPacket", rb_cObject);
 
 	/*
 	* RCoreMidi::MidiQueue
