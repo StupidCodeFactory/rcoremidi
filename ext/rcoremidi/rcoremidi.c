@@ -8,6 +8,7 @@ VALUE rb_cClient;
 VALUE rb_cPort;
 VALUE rb_cMidiQueue;
 VALUE rb_cMidiPacket;
+VALUE rb_cTimer;
 
 void
 Init_rcoremidi()
@@ -36,6 +37,8 @@ Init_rcoremidi()
     rb_define_attr(rb_cClient, "output", 1, 0);
     rb_define_attr(rb_cClient, "client_ref", 1, 0);
     rb_define_attr(rb_cClient, "source", 1, 0);
+    rb_define_attr(rb_cClient, "queue", 1, 1);
+    rb_define_attr(rb_cClient, "is_connected", 1, 1);
     /*
     * RCoreMidi::Source
     */
@@ -51,13 +54,22 @@ Init_rcoremidi()
 	rb_cMidiQueue = rb_define_class_under(rb_mRCOREMIDI, "MidiQueue", rb_cObject);
 	rb_define_method(rb_cMidiQueue, "initialize", init_midi_queue, 0);
     rb_define_attr(rb_cMidiQueue, "queue", 1, 1);
+
     /*
     * RCoreMidi::Source
     */
-    rb_cConectionManager = rb_define_class_under(rb_mRCOREMIDI, "ConectionManager", rb_cObject);
-    rb_define_singleton_method(rb_cConectionManager, "devices", get_devices,0);
+    rb_cConectionManager = rb_define_class_under(rb_mRCOREMIDI, "ConnectionManager", rb_cObject);
+    rb_define_singleton_method(rb_cConectionManager, "devices", get_devices, 0);
 	
+    /*
+    * RCoreMidi::Timer
+    */
 
+    rb_cTimer = rb_define_class_under(rb_mRCOREMIDI, "Timer", rb_cObject);
+    rb_define_method(rb_cTimer, "initialize", init_timer, 1);
+	rb_define_method(rb_cTimer, "start", start_timer, 0);
+	rb_define_attr(rb_cTimer, "tempo", 1, 1);
+	
 
 
   /* nothing here yet */

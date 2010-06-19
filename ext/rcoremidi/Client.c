@@ -97,21 +97,26 @@ VALUE client_init(int argc, VALUE *argv, VALUE self)
     rb_iv_set(self, "@client_ref", client_ref);
     rb_iv_set(self, "@name", name);
     rb_iv_set(self, "@source", Qnil);
+	rb_iv_set(self, "@queue", Qnil);
+	rb_iv_set(self, "@is_connected", Qfalse);
 
     CFRelease(cName);
+		printf("proc TRIGGERED .....\n");
+	if (rb_block_given_p()) {
+		printf("proc TRIGGERED\n");
+		rb_yield(self);
 
-	queue = rb_funcall(rb_cMidiQueue, rb_intern("new"), 0);
-	rb_iv_set(self, "@queue", queue);
-
+	}
+		printf("proc TRIGGERED ..... ????\n");
     return self;
 }
 
 VALUE connect_to(VALUE self, VALUE source)
 {
+
     VALUE in_obj = rb_iv_get(rb_iv_get(self, "@input"), "@port_ref");
     VALUE out_obj = rb_iv_get(rb_iv_get(self, "@output"), "@port_ref");
     VALUE endpoint = rb_iv_get(source,"@data");
-
     // This sits here for debuging purposes
     // I should make a macro to use this anywhere :*
 /*
@@ -146,6 +151,11 @@ VALUE connect_to(VALUE self, VALUE source)
     // END OF DEBUG
 
 
+	/*
+	* may be i should malloc these guys
+	* and then of cours free them
+	*/
+	
     MIDIPortRef *in;
     MIDIPortRef *out;
     MIDIEndpointRef *endpoint_ref;
@@ -171,8 +181,10 @@ VALUE connect_to(VALUE self, VALUE source)
         printf("%s\n", GetMacOSStatusErrorString(connectedOut));
         rb_raise(rb_eRuntimeError, "Could not connect ouyput port tout source");
     }
-*/  
-
+*/  	
+	rb_iv_set(self, "@source", source);
+	rb_iv_set(self, "@is_connected", Qtrue);
+	
     return self;
 }
 

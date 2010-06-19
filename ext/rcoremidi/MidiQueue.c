@@ -19,9 +19,7 @@ init_midi_queue(VALUE self)
 		rb_hash_aset(tick_storage, ID2SYM(rb_intern(midi_packet_key)), rMidipacket);
 		rb_hash_aset(queue, INT2FIX(i), tick_storage);
 	}
-	
 
-	
 	rb_iv_set(self, "@stack", queue);
 	return self;
 }
