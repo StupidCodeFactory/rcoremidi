@@ -2,24 +2,23 @@ module RCoreMidi
 
   class ConnectionManager
 
-    def self.ask_for_connection?
+      def self.ask_for_connection?
+        puts RCoreMidi::ConnectionManager.devices.inspect
+        devices = RCoreMidi::ConnectionManager.devices
+        raise "No device found\n" if devices.nil?
 
-      devices = RCoreMidi::ConnectionManager.devices
-      raise "No device found\n" if devices.nil?
+        print "Connect to:\n"
+        devices.each { |index, device| puts "\t#{index}) #{device.inspect}\n" }
+        print "connection: [default: 1] => "
 
-      print "Connect to:\n"
-      devices.each { |index, device| puts "\t#{index}) #{device.inspect}\n" }
-      print "connection: [default: 1] => "
-      
-       
-      while STDIN.gets != '\n' do
-        c = $_.chop.to_i
-        return devices[1] unless devices.keys.include? c
-        puts devices[c].inspect
-        return devices[c]
+
+        while STDIN.gets != '\n' do
+          c = $_.chop.to_i
+          return devices[1] unless devices.keys.include? c
+          return devices[c]
+        end
       end
-      
-    end
+
 
     def test_methd
       retrun "tested"
