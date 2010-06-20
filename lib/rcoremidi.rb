@@ -7,9 +7,11 @@ require "rcoremidi/client"
 begin
   require "rcoremidi.bundle"
 rescue
+  require "../ext/rcoremidi/rcoremidi.bundle"  
+ensure
   puts "Rcore Midi bundle not laoded"
 end
-# require "../ext/rcoremidircoremidi.bundle"
+
 module Rcoremidi
   VERSION = '0.0.1'
   

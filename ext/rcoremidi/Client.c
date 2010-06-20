@@ -188,7 +188,20 @@ VALUE connect_to(VALUE self, VALUE source)
     return self;
 }
 
-
+VALUE dispose_client(VALUE self)
+{
+	VALUE client_ref = rb_iv_get(self, "@client_ref");
+	MIDIClientRef *client;
+	Data_Get_Struct(client_ref, MIDIClientRef, client);
+	
+	OSStatus error;
+	error = MIDIClientDispose(*client);
+	if (error != noErr) {
+		rb_raise(rb_eRuntimeError, "Could dispose midi client");
+	}
+	rb_iv_set(self, "@client_ref", Qnil);
+	return self;
+}
 
 void printProofTwo()
 {

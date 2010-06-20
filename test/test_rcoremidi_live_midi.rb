@@ -11,10 +11,8 @@ class TestRcoremidi < Test::Unit::TestCase
   end
 
   
-  def test_can_instanciate_ConectionManager
-    # puts @conn_pool.inspect
-    # puts "-----------------"
-    # puts @chosen_connection.inspect
-    # assert_instance_of Proc, @conn_pool
+  def test_client_has_dispose_method
+    puts @client.methods.sort.inspect
+    assert @client.respond_to? "dispose"
   end
 end
