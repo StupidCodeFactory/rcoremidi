@@ -5,11 +5,11 @@ $:.unshift(File.dirname(__FILE__)) unless
 require "rcoremidi/connection_manager"
 require "rcoremidi/client"
 begin
-  require "rcoremidi.bundle"
-rescue
-  require "../ext/rcoremidi/rcoremidi.bundle"  
-ensure
-  puts "Rcore Midi bundle not laoded"
+  require "../ext/rcoremidi/rcoremidi.bundle" unless require "rcoremidi.bundle" 
+rescue LoadError
+
+rescue Eception => e
+  puts "Rcore Midi bundle not loaded"
 end
 
 module Rcoremidi

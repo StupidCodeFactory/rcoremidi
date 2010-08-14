@@ -8,7 +8,6 @@ class TestRcoremidiExtn < Test::Unit::TestCase
   end
   
   def test_can_return_array_of_sources
-    puts @conn_manager.inspect
     assert_instance_of Hash, @conn_manager, "Wrong class instance" 
   end
   
@@ -68,7 +67,6 @@ class TestRcoremidiExtn < Test::Unit::TestCase
   
   def test_can_instanciate_MidiQueue
       queue = RCoreMidi::MidiQueue.new
-      puts queue.inspect
       assert_not_nil queue
   end
   

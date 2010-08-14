@@ -47,6 +47,7 @@ Init_rcoremidi()
     rb_cSource = rb_define_class_under(rb_mRCOREMIDI, "Source", rb_cObject);
     rb_define_method(rb_cSource, "initialize", source_init, 2);
     rb_define_attr(rb_cSource, "data", 1, 0);
+    rb_define_attr(rb_cSource, "name", 1, 0);
 
 	rb_cMidiPacket = rb_define_class_under(rb_mRCOREMIDI, "MidiPacket", rb_cObject);
 
@@ -62,7 +63,7 @@ Init_rcoremidi()
     */
     rb_cConectionManager = rb_define_class_under(rb_mRCOREMIDI, "ConnectionManager", rb_cObject);
     rb_define_singleton_method(rb_cConectionManager, "devices", get_devices, 0);
-	
+
     /*
     * RCoreMidi::Timer
     */

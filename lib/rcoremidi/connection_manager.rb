@@ -3,12 +3,11 @@ module RCoreMidi
   class ConnectionManager
 
       def self.ask_for_connection?
-        puts RCoreMidi::ConnectionManager.devices.inspect
         devices = RCoreMidi::ConnectionManager.devices
         raise "No device found\n" if devices.nil?
 
         print "Connect to:\n"
-        devices.each { |index, device| puts "\t#{index}) #{device.inspect}\n" }
+        devices.each { |index, device| puts "\t#{index}) #{device.name}\n" }
         print "connection: [default: 1] => "
 
 

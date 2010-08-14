@@ -61,7 +61,7 @@ VALUE client_init(int argc, VALUE *argv, VALUE self)
     // ALLOC(MIDIClientRef)
     MIDIClientRef client;
 
-    CFStringRef cName = CFStringCreateWithCString(NULL, RSTRING(name)->ptr, kCFStringEncodingUTF8);
+    CFStringRef cName = CFStringCreateWithCString(NULL, RSTRING_PTR(name), kCFStringEncodingUTF8);
                             // midinotifyProc
     OSStatus created;
     created = MIDIClientCreate(cName, NULL, NULL, &client);
