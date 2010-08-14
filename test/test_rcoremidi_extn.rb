@@ -72,7 +72,6 @@ class TestRcoremidiExtn < Test::Unit::TestCase
   
   def test_assert_can_instanciate_Timer_class
     timer = RCoreMidi::Timer.new 180
-    puts timer.inspect
   end
   
   def test_can_change_tempo

@@ -100,14 +100,14 @@ VALUE client_init(int argc, VALUE *argv, VALUE self)
 	rb_iv_set(self, "@queue", Qnil);
 	rb_iv_set(self, "@is_connected", Qfalse);
 
-    CFRelease(cName);
-		printf("proc TRIGGERED .....\n");
-	if (rb_block_given_p()) {
-		printf("proc TRIGGERED\n");
-		rb_yield(self);
-
-	}
-		printf("proc TRIGGERED ..... ????\n");
+	//     CFRelease(cName);
+	// 	printf("proc TRIGGERED .....\n");
+	// if (rb_block_given_p()) {
+	// 	printf("proc TRIGGERED\n");
+	// 	rb_yield(self);
+	// 
+	// }
+	// 	printf("proc TRIGGERED ..... ????\n");
     return self;
 }
 
@@ -199,6 +199,7 @@ VALUE dispose_client(VALUE self)
 	if (error != noErr) {
 		rb_raise(rb_eRuntimeError, "Could dispose midi client");
 	}
+	printf("Client disposed");
 	rb_iv_set(self, "@client_ref", Qnil);
 	return self;
 }

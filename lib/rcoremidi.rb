@@ -1,15 +1,16 @@
 $:.unshift(File.dirname(__FILE__)) unless
   $:.include?(File.dirname(__FILE__)) || $:.include?(File.expand_path(File.dirname(__FILE__)))
+$:.unshift(File.join(File.dirname(__FILE__) + '/../ext/rcoremidi/')) unless
+  $:.include?(File.join(File.dirname(__FILE__) + '/../ext/rcoremidi/')) || $:.include?(File.expand_path(File.join(File.dirname(__FILE__) + '/../ext/rcoremidi/')))
 
-# puts $:.inspect
+puts $:.grep(/rcoremidi/).inspect
 require "rcoremidi/connection_manager"
 require "rcoremidi/client"
 begin
-  require "../ext/rcoremidi/rcoremidi.bundle" unless require "rcoremidi.bundle" 
-rescue LoadError
+  require 'rcoremidi.bundle'
+rescue Exception
+ensure
 
-rescue Eception => e
-  puts "Rcore Midi bundle not loaded"
 end
 
 module Rcoremidi

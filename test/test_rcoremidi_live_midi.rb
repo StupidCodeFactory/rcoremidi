@@ -7,12 +7,11 @@ class TestRcoremidi < Test::Unit::TestCase
 
   def setup
       @client =  RCoreMidi::Client.new("test name").setup
-      puts @client.inspect
   end
 
   
   def test_client_has_dispose_method
-    puts @client.methods.sort.inspect
-    assert @client.respond_to? "dispose"
+    puts @client.dispose
+    # assert @client.respond_to? "dispose"
   end
 end
