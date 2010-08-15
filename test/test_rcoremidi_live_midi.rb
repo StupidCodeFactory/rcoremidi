@@ -2,7 +2,7 @@ require "test/unit"
 require File.dirname(__FILE__) + '/test_helper.rb'
 
 
-class TestRcoremidi < Test::Unit::TestCase
+class TestRCoremidi < Test::Unit::TestCase
 
 
   def setup

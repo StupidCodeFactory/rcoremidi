@@ -18,13 +18,6 @@ module RCoreMidi
         end
       end
 
-
-    def test_methd
-      retrun "tested"
-    end
-    
-    
-    
   end  
     
 end

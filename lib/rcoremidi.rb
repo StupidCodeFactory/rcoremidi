@@ -13,7 +13,7 @@ ensure
 
 end
 
-module Rcoremidi
+module RCoremidi
   VERSION = '0.0.1'
   
   

@@ -6,6 +6,13 @@ VALUE init_timer(VALUE self, VALUE tempo)
 	return self;
 }
 
+VALUE at(VALUE self, VALUE tempo)
+{
+
+	return self;
+}
+
+
 VALUE start_timer(VALUE self)
 {
 	CFRunLoopRun();
