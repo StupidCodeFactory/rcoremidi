@@ -58,13 +58,12 @@ VALUE client_init(int argc, VALUE *argv, VALUE self)
     VALUE out_obj = rb_iv_get(rb_iv_get(self, "@output"), "@port_ref");
     // Data_Get_Struct(obj, MIDIPortRef, DATA_PTR(obj));
 
-    // ALLOC(MIDIClientRef)
-    MIDIClientRef client;
-
+    MIDIClientRef *client = ALLOC(MIDIClientRef);
     CFStringRef cName = CFStringCreateWithCString(NULL, RSTRING_PTR(name), kCFStringEncodingUTF8);
-                            // midinotifyProc
+
+	// MIDINOTIFYPROC
     OSStatus created;
-    created = MIDIClientCreate(cName, NULL, NULL, &client);
+    created = MIDIClientCreate(cName, NULL, NULL, client);
     
     if (created != noErr) {
         rb_raise(rb_eRuntimeError, "Cound not create input port");
@@ -77,22 +76,20 @@ VALUE client_init(int argc, VALUE *argv, VALUE self)
 
     Data_Get_Struct(out_obj,MIDIPortRef,out);
 
-    created = MIDIInputPortCreate(client, CFSTR("input") , MidiReadProc, NULL, in);
-
+    created = MIDIInputPortCreate(*client, CFSTR("input") , MidiReadProc, NULL, in);
+	
     if (created != noErr) {
         rb_raise(rb_eRuntimeError, "Cound not create input port");
     } 
 
 
-    created = MIDIOutputPortCreate(client, CFSTR("output") , out);
+    created = MIDIOutputPortCreate(*client, CFSTR("output") , out);
     
     if (created != noErr) {
         rb_raise(rb_eRuntimeError, "Cound not create output port");
     }
 
-
-    MIDIClientRef *client_p = &client;
-    client_ref = Data_Make_Struct(rb_cObject, MIDIClientRef, 0, free, client_p);
+    client_ref = Data_Wrap_Struct(rb_cClient, NULL, free, client);
 
     rb_iv_set(self, "@client_ref", client_ref);
     rb_iv_set(self, "@name", name);
@@ -100,14 +97,6 @@ VALUE client_init(int argc, VALUE *argv, VALUE self)
 	rb_iv_set(self, "@queue", Qnil);
 	rb_iv_set(self, "@is_connected", Qfalse);
 
-	//     CFRelease(cName);
-	// 	printf("proc TRIGGERED .....\n");
-	// if (rb_block_given_p()) {
-	// 	printf("proc TRIGGERED\n");
-	// 	rb_yield(self);
-	// 
-	// }
-	// 	printf("proc TRIGGERED ..... ????\n");
     return self;
 }
 
@@ -117,39 +106,6 @@ VALUE connect_to(VALUE self, VALUE source)
     VALUE in_obj = rb_iv_get(rb_iv_get(self, "@input"), "@port_ref");
     VALUE out_obj = rb_iv_get(rb_iv_get(self, "@output"), "@port_ref");
     VALUE endpoint = rb_iv_get(source,"@data");
-    // This sits here for debuging purposes
-    // I should make a macro to use this anywhere :*
-/*
-            switch (TYPE(in_obj)) {
-                case T_FIXNUM:
-                printf("%d\n", FIX2INT(in_obj));
-                break;
-                case T_STRING:
-                printf("%s\n", StringValue(in_obj));
-                break;
-                case T_ARRAY:
-                printf("array ?????\n");
-                break;
-                case T_NIL:
-                printf("NIL\n");
-                break;
-                case T_OBJECT:
-                printf("T_OBJECT\n");
-                break;
-                case T_CLASS:
-                printf("T_CLASS\n");
-                break;
-                case T_DATA:
-                printf("T_DATA\n");
-                break;
-                default:
-                rb_raise(rb_eTypeError, "not valid value");
-                break;
-            }
-        */
-
-    // END OF DEBUG
-
 
 	/*
 	* may be i should malloc these guys
@@ -191,20 +147,49 @@ VALUE connect_to(VALUE self, VALUE source)
 VALUE dispose_client(VALUE self)
 {
 	VALUE client_ref = rb_iv_get(self, "@client_ref");
-	MIDIClientRef *client;
+
+	MIDIClientRef *client = ALLOC(MIDIClientRef);
 	Data_Get_Struct(client_ref, MIDIClientRef, client);
+
+    // // This sits here for debuging purposes
+    // // I should make a macro to use this anywhere :*
+    //         switch (TYPE(client_ref)) {
+    //             case T_FIXNUM:
+    //             printf("%d\n", FIX2INT(client_ref));
+    //             break;
+    //             case T_STRING:
+    //             printf("%s\n", StringValue(client_ref));
+    //             break;
+    //             case T_ARRAY:
+    //             printf("array ?????\n");
+    //             break;
+    //             case T_NIL:
+    //             printf("NIL\n");
+    //             break;
+    //             case T_OBJECT:
+    //             printf("T_OBJECT\n");
+    //             break;
+    //             case T_CLASS:
+    //             printf("T_CLASS\n");
+    //             break;
+    //             case T_DATA:
+    //             printf("T_DATA\n");
+    //             break;
+    //             default:
+    //             rb_raise(rb_eTypeError, "not valid value");
+    //             break;
+    //         }
+    // 
+    // // END OF DEBUG
+    // 
 	
 	OSStatus error;
-	error = MIDIClientDispose(*client);
+	error = MIDIClientDispose((MIDIClientRef) *client);
 	if (error != noErr) {
+		printf("%s\n", GetMacOSStatusCommentString(error));
 		rb_raise(rb_eRuntimeError, "Could dispose midi client");
 	}
-	printf("Client disposed");
 	rb_iv_set(self, "@client_ref", Qnil);
 	return self;
 }
 
-void printProofTwo()
-{
-	printf("proof of concept TWO\n");
-}

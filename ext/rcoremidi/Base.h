@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <ruby.h>
-#include <CoreFoundation/CoreFoundation.h>
+#include <Carbon/carbon.h>
 #include <CoreAudio/CoreAudio.h>
 #include <CoreMIDI/MIDIServices.h>
 #include "MidiQueue.h"

@@ -7,5 +7,6 @@
 VALUE client_init(int argc, VALUE *argv, VALUE self);
 VALUE connect_to(VALUE self, VALUE source);
 VALUE dispose_client(VALUE self);
-void printProofTwo();
+VALUE cClientAlloc(VALUE klass);
+
 

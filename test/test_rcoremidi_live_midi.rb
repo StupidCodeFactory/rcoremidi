@@ -11,7 +11,6 @@ class TestRcoremidi < Test::Unit::TestCase
 
   
   def test_client_has_dispose_method
-    puts @client.dispose
-    # assert @client.respond_to? "dispose"
+    assert @client.respond_to? "dispose"
   end
 end

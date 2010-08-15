@@ -41,6 +41,7 @@ Init_rcoremidi()
     rb_define_attr(rb_cClient, "queue", 1, 1);
     rb_define_attr(rb_cClient, "is_connected", 1, 1);
 
+
     /*
     * RCoreMidi::Source
     */
@@ -48,7 +49,7 @@ Init_rcoremidi()
     rb_define_method(rb_cSource, "initialize", source_init, 2);
     rb_define_attr(rb_cSource, "data", 1, 0);
     rb_define_attr(rb_cSource, "name", 1, 0);
-
+	
 	rb_cMidiPacket = rb_define_class_under(rb_mRCOREMIDI, "MidiPacket", rb_cObject);
 
 	/*
