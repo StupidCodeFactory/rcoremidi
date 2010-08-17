@@ -33,6 +33,9 @@ Init_rcoremidi()
     rb_define_method(rb_cClient, "initialize", client_init, -1);
     rb_define_method(rb_cClient, "connect_to", connect_to, 1);
 	rb_define_method(rb_cClient, "dispose", dispose_client, 0);
+	rb_define_method(rb_cClient, "start", start, 0);
+	rb_define_method(rb_cClient, "stop", stop, 0);
+
     rb_define_attr(rb_cClient, "name", 1, 1);
     rb_define_attr(rb_cClient, "input", 1, 0);
     rb_define_attr(rb_cClient, "output", 1, 0);
