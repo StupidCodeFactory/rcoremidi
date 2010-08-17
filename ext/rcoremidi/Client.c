@@ -7,6 +7,44 @@
 *
 */
 
+// static void send(VALUE self, VAlUE array)
+// {
+// 	
+// }
+
+
+
+void notifyProc(const MIDINotification *notification, void *refCon)
+{
+	switch (notification->messageID) {
+		case kMIDIMsgSetupChanged:
+			printf("MIDINotifyProc: SET UP HAS CHANGED\n");
+			break;
+		case kMIDIMsgPropertyChanged:
+			printf("MIDINotifyProc: SET UP PROPERTY CHANGED\n");
+			break;
+		case kMIDIMsgIOError:
+			printf("MIDINotifyProc: IO ERROR\n");
+			break;
+		case kMIDIMsgObjectAdded:
+			printf("MIDINotifyProc: OBJECT ADDED\n");
+			break;
+		case kMIDIMsgObjectRemoved:
+			printf("MIDINotifyProc: OBECT REMOVE\n");
+			break;
+		case kMIDIMsgSerialPortOwnerChanged:
+			printf("MIDINotifyProc: SERAIL PORT OWNER CHAGED\n");
+			break;
+		case kMIDIMsgThruConnectionsChanged:
+			printf("MIDINotifyProc: THRU CONNECTION CHANGED\n");
+			break;
+			
+		default:
+			printf("MIDINotifyProc: WHAT THE FUCK\n");
+			break;
+	}
+}
+
 static void MidiReadProc(const MIDIPacketList *pktlist, void *refCon, void *connRefCon){
 
     MIDIPacket *packet = (MIDIPacket *)pktlist->packet;	// remove const (!)
@@ -56,14 +94,14 @@ VALUE client_init(int argc, VALUE *argv, VALUE self)
     // input and output port instance variables
     VALUE in_obj = rb_iv_get(rb_iv_get(self, "@input"), "@port_ref");
     VALUE out_obj = rb_iv_get(rb_iv_get(self, "@output"), "@port_ref");
-    // Data_Get_Struct(obj, MIDIPortRef, DATA_PTR(obj));
+
 
     MIDIClientRef *client = ALLOC(MIDIClientRef);
     CFStringRef cName = CFStringCreateWithCString(NULL, RSTRING_PTR(name), kCFStringEncodingUTF8);
 
 	// MIDINOTIFYPROC
     OSStatus created;
-    created = MIDIClientCreate(cName, NULL, NULL, client);
+    created = MIDIClientCreate(cName, notifyProc, NULL, client);
     
     if (created != noErr) {
         rb_raise(rb_eRuntimeError, "Cound not create input port");
@@ -98,6 +136,19 @@ VALUE client_init(int argc, VALUE *argv, VALUE self)
 	rb_iv_set(self, "@is_connected", Qfalse);
 
     return self;
+}
+
+VALUE start(VALUE self)
+{
+	printf("Staring th client in C\n");
+	CFRunLoopRun();
+	return self;
+}
+
+VALUE stop(VALUE self)
+{
+	CFRunLoopStop(CFRunLoopGetCurrent());
+	return self;
 }
 
 VALUE connect_to(VALUE self, VALUE source)

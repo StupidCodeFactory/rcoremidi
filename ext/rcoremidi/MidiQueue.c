@@ -7,7 +7,7 @@ init_midi_queue(VALUE self)
 	
 	const char *timestamp_key = "timestamp";
 	const char *midi_packet_key = "notes";	
-	// @TODO set 96 keys with array to store MIDIPacket or MIDIPacketList
+
 	int i;
 	for(i = 0; i < 96; ++i)
 	{
