@@ -30,6 +30,7 @@ Init_rcoremidi()
     * RCoreMidi::Client
     */
     rb_cClient =  rb_define_class_under(rb_mRCOREMIDI, "Client", rb_cObject);
+    rb_define_alloc_func(rb_cClient, client_alloc);
     rb_define_method(rb_cClient, "initialize", client_init, -1);
     rb_define_method(rb_cClient, "connect_to", connect_to, 1);
 	rb_define_method(rb_cClient, "dispose", dispose_client, 0);
