@@ -149,11 +149,9 @@ VALUE client_init(int argc, VALUE *argv, VALUE self)
 VALUE connect_to(VALUE self, VALUE source)
 {
     RCoremidiNode *clientNode;
-    // , RCoremidiNode, clientNode);
     TypedData_Get_Struct(self, RCoremidiNode, &midi_node_data_t, clientNode);
     printf("Did i get the rigth reference???? %s\n", clientNode->name);
-    // VALUE in_obj = rb_iv_get(rb_iv_get(self, "@input"), "@port_ref");
-    // VALUE out_obj = rb_iv_get(rb_iv_get(self, "@output"), "@port_ref");
+
     // VALUE endpoint = rb_iv_get(source,"@data");
 
     // VALUE client = rb_iv_get(self, "@client_ref");
