@@ -9,7 +9,7 @@ the osx CoreMidi Framework
 == FEATURES/PROBLEMS:
 
 * (list of features or problems)
-
+* It DOES NOT WORK YET!!!
 == SYNOPSIS:
 
   (code sample of usage)
@@ -22,6 +22,7 @@ the osx CoreMidi Framework
 
 * FIX (sudo gem install, anything else)
 	Not ready yet for installation
+	
 == LICENSE:
 
 (The MIT License)
