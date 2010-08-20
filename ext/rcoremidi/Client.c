@@ -162,10 +162,8 @@ VALUE connect_to(VALUE self, VALUE source)
 
 VALUE dispose_client(VALUE self)
 {
-    VALUE client_ref = rb_iv_get(self, "@client_ref");
-    
-    MIDIClientRef *client = ALLOC(MIDIClientRef);
-    Data_Get_Struct(client_ref, MIDIClientRef, client);
+    RCoremidiNode *clientNode;
+    TypedData_Get_Struct(self, RCoremidiNode, &midi_node_data_t, clientNode);
 
     // // This sits here for debuging purposes
     // // I should make a macro to use this anywhere :*
@@ -200,23 +198,13 @@ VALUE dispose_client(VALUE self)
     // 
 	
 	OSStatus error;
-	error = MIDIClientDispose((MIDIClientRef) *client);
+	error = MIDIClientDispose((MIDIClientRef) *clientNode->client);
 	if (error != noErr) {
 		printf("%s\n", GetMacOSStatusCommentString(error));
 		rb_raise(rb_eRuntimeError, "Could dispose midi client");
 	}
-	rb_iv_set(self, "@client_ref", Qnil);
-	return self;
-}
-VALUE start(VALUE self)
-{
-	printf("Staring th client in C\n");
 	return self;
 }
 
-VALUE stop(VALUE self)
-{
-	return self;
-}
 
 

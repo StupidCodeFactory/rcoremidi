@@ -7,5 +7,12 @@ module RCoreMidi
       self
     end
     
+    def start
+      loop do
+        trap 'SIGINT', proc { puts "quiting"; exit(0) }
+      end
+      
+    end
+    
   end
 end

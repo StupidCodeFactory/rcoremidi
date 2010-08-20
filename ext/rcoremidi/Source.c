@@ -11,7 +11,7 @@ void midi_endpoint_free(void *ptr)
 
 void midi_endpoint_mark(void *ptr)
 {
-    printf("SHOULD i mark %p \n", ptr);
+    // printf("SHOULD i mark %p \n", ptr);
 }
 
 size_t midi_endpoint_memsize(const void *ptr)
