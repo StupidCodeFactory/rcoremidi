@@ -40,10 +40,10 @@ VALUE client_alloc(VALUE klass)
 {
     RCoremidiNode *midiNode;
     VALUE obj = TypedData_Make_Struct(klass, RCoremidiNode, &midi_node_data_t, midiNode);
-    midiNode->client = NULL;
+    midiNode->client = ALLOC(MIDIClientRef);
     midiNode->name   = NULL;
-    midiNode->in     = NULL;
-    midiNode->out    = NULL;
+    midiNode->in     = ALLOC(MIDIPortRef);
+    midiNode->out    = ALLOC(MIDIPortRef);
     return obj;
 }
 
@@ -112,13 +112,8 @@ VALUE client_init(int argc, VALUE *argv, VALUE self)
 
 
     RCoremidiNode *clientNode;
-    MIDIClientRef *client = ALLOC(MIDIClientRef);
-    MIDIPortRef *in       = ALLOC(MIDIPortRef);
-    MIDIPortRef *out      = ALLOC(MIDIPortRef);
     TypedData_Get_Struct(self, RCoremidiNode, &midi_node_data_t, clientNode);
-    clientNode->client = client;
-    clientNode->in     = in;
-    clientNode->out    = out;
+
     clientNode->name   = (char *)malloc(strlen("name"));
     strncpy(clientNode->name, "name", strlen("name"));
     
