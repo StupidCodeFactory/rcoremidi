@@ -1,5 +1,7 @@
 #include "Base.h"
 
+
+
 VALUE get_devices()
 {
     VALUE arr = rb_ary_new();
@@ -9,33 +11,24 @@ VALUE get_devices()
     for(i = 0; i < (int) MIDIGetNumberOfSources(); ++i)
     {
         OSStatus status;
+        VALUE rName = Qnil;
+
+        VALUE source = rb_funcall(rb_cSource, rb_intern("new"), 1, rName);
+
         MIDIEndpointRef *endpoint;
-        
-        endpoint = ALLOC(MIDIEndpointRef);
+        TypedData_Get_Struct(source, MIDIEndpointRef, &midi_endpoint_data_t, endpoint);
         *endpoint = MIDIGetSource((ItemCount)i);
 
         CFStringRef pname;
-
         status = MIDIObjectGetStringProperty(*endpoint, kMIDIPropertyDisplayName, &pname);
-
         if (status == noErr){
-
             char name[64];
-
-            CFStringGetCString(pname, name, sizeof(name), 0);
-            VALUE rName = rb_str_new2(name);
+            CFStringGetCString(pname, name, sizeof(name), kCFStringEncodingUTF8);
+            VALUE rName = rb_external_str_new_cstr(name);
+            rb_iv_set(source, "@name", rName);
             CFRelease(pname);
-
-            VALUE obj;
-
-            obj = Data_Wrap_Struct(rb_cEndpoint, 0, free, endpoint);
-
-            rb_hash_aset(sources, INT2FIX(i+1), rb_funcall(rb_cSource, rb_intern("new"), 2, rName, obj));
-            rb_ary_push(arr, rb_funcall(rb_cSource, rb_intern("new"), 2, rName, obj));
-
+            rb_hash_aset(sources, INT2FIX(i+1), source);
         }
-
-
     }
     return sources;
 }

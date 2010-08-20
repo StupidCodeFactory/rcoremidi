@@ -121,7 +121,7 @@ VALUE client_init(int argc, VALUE *argv, VALUE self)
     clientNode->out    = out;
     clientNode->name   = (char *)malloc(strlen("name"));
     strncpy(clientNode->name, "name", strlen("name"));
-    // 
+    
     CFStringRef cName = CFStringCreateWithCString(NULL, RSTRING_PTR(name), kCFStringEncodingUTF8);
 
     // MIDINOTIFYPROC
@@ -140,8 +140,8 @@ VALUE client_init(int argc, VALUE *argv, VALUE self)
     if (created != noErr) {
         rb_raise(rb_eRuntimeError, "Cound not create output port");
     }
+    
     rb_iv_set(self, "@name", name);
-    rb_iv_set(self, "@source", Qnil);
     rb_iv_set(self, "@queue", Qnil);
     return self;
 }
@@ -150,44 +150,18 @@ VALUE connect_to(VALUE self, VALUE source)
 {
     RCoremidiNode *clientNode;
     TypedData_Get_Struct(self, RCoremidiNode, &midi_node_data_t, clientNode);
-    printf("Did i get the rigth reference???? %s\n", clientNode->name);
+    
+    MIDIEndpointRef *endpt;
+    TypedData_Get_Struct(source, MIDIEndpointRef, &midi_endpoint_data_t, endpt);
 
-    // VALUE endpoint = rb_iv_get(source,"@data");
-
-    // VALUE client = rb_iv_get(self, "@client_ref");
-
-	/*
-	* may be i should malloc these guys
-	* and then of cours free them
-	*/
-	
-	
-
-    // exit(0);
-    // Data_Get_Struct(endpoint, MIDIEndpointRef, endpoint_ref);
-    // 
-    // Data_Get_Struct(in_obj, MIDIPortRef, in);
-    // 
-    // Data_Get_Struct(out_obj, MIDIPortRef, out);
-    // OSStatus connected;
-    // connected = MIDIPortConnectSource(*in, *endpoint_ref, NULL);
-    // if (connected != noErr) {
-    //     rb_raise(rb_eRuntimeError, "Could not connect input port tout source");
-    // }
-/*
     OSStatus connectedOut;
-    printf("%p\n", *in);
-    printf("%p\n", *out);
-    connectedOut = MIDIPortConnectSource(*out, *endpoint_ref, NULL);
+    connectedOut = MIDIPortConnectSource(*clientNode->in, *endpt, NULL);
     if (connectedOut != noErr) {
-        printf("%d\n", noErr);
-        printf("%s\n", GetMacOSStatusErrorString(connectedOut));
+        printf("%s\n", GetMacOSStatusCommentString(connectedOut));
         rb_raise(rb_eRuntimeError, "Could not connect ouyput port tout source");
     }
-*/  	
-    // rb_iv_set(self, "@source", source);
-    // rb_iv_set(self, "@is_connected", Qtrue);
-    // 
+    rb_iv_set(self, "@source", source);
+    rb_iv_set(self, "@is_connected", Qtrue);
     return self;
 }
 
