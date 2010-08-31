@@ -7,9 +7,9 @@
 *
 */
 
+
 static void midi_node_free(void *ptr)
 {
-    printf("FREEING midi node \n");
     RCoremidiNode *tmp = ptr;
     if(tmp) {
         // May be (also) use MIDICLientDispose() from OSX API?
@@ -26,7 +26,6 @@ static void midi_node_free(void *ptr)
 
 static size_t midi_node_memsize(const void *ptr)
 {
-    printf("MIDI NOTE MEMSIZE\n");
     return ptr ? sizeof(RCoremidiNode) : 0;
 }
 
@@ -47,7 +46,7 @@ VALUE client_alloc(VALUE klass)
     return obj;
 }
 
-void notifyProc(const MIDINotification *notification, void *refCon)
+static void notifyProc(const MIDINotification *notification, void *refCon)
 {
 	switch (notification->messageID) {
 		case kMIDIMsgSetupChanged:
@@ -85,13 +84,44 @@ static void MidiReadProc(const MIDIPacketList *pktlist, void *refCon, void *conn
     int i;
 
     for (j = 0; j < pktlist->numPackets; ++j) {
+	
+		/*
+		* Check length:
+		* if length == 1
+		* 	=> parse packet => do whatever packet need
+		* 
+		* if length > 1
+		*	send packet to function using agregated midi packet	
+		*/
+	
         for (i = 0; i < packet->length; ++i) {
-         printf("count %d :\t%X\n",  packet->length, packet->data[i]);
-    // 
+        	printf("count %d :\t%X\n",  packet->length, packet->data[i]);
+
+			switch(packet->data[i]) {
+				case kMIDIStart:
+					start_timestamp = AudioGetCurrentHostTime(), 
+					
+					printf("Starting at %llu\n, host clock Fz: %lf, minimu delta %d\n", 
+							AudioGetCurrentHostTime(), 
+							AudioGetHostClockFrequency(), 
+							AudioGetHostClockMinimumTimeDelta());
+				case kMIDIStop:
+					printf("Stoping Client...\n");
+				case kMIDITick:
+					tick_count++;
+					if ((tick_count % 24) == 0) {
+						quarter++;
+						printf("QUARTER PASTED %d\n", quarter);
+					}
+					printf("Ticking?? %d\n", tick_count);
+				case kMIDISongPositionPointer :
+					printf("status byte %X data byte 1: %X data byte 2: %X\n", packet->data[i], packet->data[i+1], packet->data[i+2]);
+					
+			}
     //      // rechannelize status bytes
-    //                 //  if (packet->data[i] >= 0x80 && packet->data[i] < 0xF0)
-    //                 //      packet->data[i] = (packet->data[i] & 0xF0) | gChannel;
-    //                 // }
+          //  if (packet->data[i] >= 0x80 && packet->data[i] < 0xF0)
+          //      packet->data[i] = (packet->data[i] & 0xF0) | gChannel;
+          // }
     // 
      // packet = MIDIPacketNext(packet);
         }
@@ -119,13 +149,17 @@ VALUE client_init(int argc, VALUE *argv, VALUE self)
     
     CFStringRef cName = CFStringCreateWithCString(NULL, RSTRING_PTR(name), kCFStringEncodingUTF8);
 
-    // MIDINOTIFYPROC
-    OSStatus created;                             //Notify refcon!!!
+    OSStatus created;                 // Notify refcon!!! I should make 
+									  // structure to identify midi client, if there are more than one
     created = MIDIClientCreate(cName, notifyProc, NULL, clientNode->client);
     if (created != noErr) {
         rb_raise(rb_eRuntimeError, "Cound not create input port");
     }
-
+																					/*
+																					* Then here i should 
+																					* also make a structy idententifying 
+																					* the input as there might be more than one 
+																					*/
     created = MIDIInputPortCreate(*clientNode->client, CFSTR("input") , MidiReadProc, NULL, clientNode->in);
     if (created != noErr) {
         rb_raise(rb_eRuntimeError, "Cound not create input port");

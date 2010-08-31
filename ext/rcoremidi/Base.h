@@ -20,3 +20,13 @@ extern VALUE rb_cPort;
 extern VALUE rb_cMidiQueue;
 extern VALUE rb_cMidiPacket;
 extern VALUE rb_cTimer;
+
+typedef enum MidiStatus MidiStatus;
+enum MidiStatus
+{
+	kMIDISongPositionPointer = 0xF2,
+	kMIDITick  	     		 = 0xF8,
+	kMIDIStart 	     		 = 0xFA,
+	kMIDIContinue    		 = 0xFB,
+	kMIDIStop 	     		 = 0xFC
+};
