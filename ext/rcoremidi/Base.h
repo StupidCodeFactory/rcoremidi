@@ -30,3 +30,10 @@ enum MidiStatus
 	kMIDIContinue    		 = 0xFB,
 	kMIDIStop 	     		 = 0xFC
 };
+
+typedef enum MidiState MidiState;
+enum MidiState
+{
+	kMIDIStarted = 0,
+	kMIDIStoped  = 1
+};
