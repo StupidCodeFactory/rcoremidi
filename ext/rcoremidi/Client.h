@@ -11,13 +11,14 @@ VALUE client_alloc();
 
 typedef struct RCoreMidiTransport
 {
-	UInt64 start_timestamp  = 0;
-	unsigned int tempo      = 0;
-	unsigned int tick_count = 0;
-	unsigned int bar        = 0;
-	unsigned int quarter    = 0;
-	unsigned int eigth 	    = 0;
-	unsigned int sixteinth  = 0;
+	UInt64 start_timestamp;
+	unsigned short state; 
+	unsigned int tempo;
+	unsigned int tick_count;
+	unsigned int bar;
+	unsigned int quarter;
+	unsigned int eigth;
+	unsigned int sixteinth;
 } RCoreMidiTransport;
 
 typedef struct RCoremidiNode
@@ -26,7 +27,6 @@ typedef struct RCoremidiNode
     char *name;
     MIDIPortRef *in;
     MIDIPortRef *out;
-	RCoreMidiTransport transport;
 } RCoremidiNode;
 
 

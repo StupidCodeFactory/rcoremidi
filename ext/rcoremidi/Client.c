@@ -7,6 +7,7 @@
 *
 */
 
+static RCoreMidiTransport transport;
 
 static void midi_node_free(void *ptr)
 {
@@ -99,37 +100,63 @@ static void MidiReadProc(const MIDIPacketList *pktlist, void *refCon, void *conn
 
 			switch(packet->data[i]) {
 				case kMIDIStart:
-					start_timestamp = AudioGetCurrentHostTime(), 
+					transport.start_timestamp = AudioGetCurrentHostTime();
 					
 					printf("Starting at %llu\n, host clock Fz: %lf, minimu delta %d\n", 
 							AudioGetCurrentHostTime(), 
 							AudioGetHostClockFrequency(), 
 							AudioGetHostClockMinimumTimeDelta());
+					break;
 				case kMIDIStop:
 					printf("Stoping Client...\n");
+					break;
 				case kMIDITick:
-					tick_count++;
-					if ((tick_count % 24) == 0) {
-						quarter++;
-						printf("QUARTER PASTED %d\n", quarter);
+					transport.tick_count++;
+					// bar
+					if((transport.tick_count % 64) == 0)
+					{
+						printf("got a modulo 64  %d\n", transport.bar);
+						transport.bar++;
 					}
-					printf("Ticking?? %d\n", tick_count);
-				case kMIDISongPositionPointer :
-					printf("status byte %X data byte 1: %X data byte 2: %X\n", packet->data[i], packet->data[i+1], packet->data[i+2]);
+					// quarter
+					if ((transport.tick_count % 24) == 0) {
+						transport.quarter++;
+						printf("QUARTER PASTED %d\n", transport.quarter);
+					}
+					// eigth
+					if ((transport.tick_count % 12) == 0) {
+						transport.eigth++;
+					}
+					// sixteinth
+					if ((transport.tick_count % 8) == 0) {
+						transport.sixteinth++;
+					}
+					break;
+				case kMIDISongPositionPointer:
+					break;
+					// printf("status byte %X data byte 1: %X data byte 2: %X\n", packet->data[i], packet->data[i+1], packet->data[i+2]);
 					
 			}
-    //      // rechannelize status bytes
+          // rechannelize status bytes
           //  if (packet->data[i] >= 0x80 && packet->data[i] < 0xF0)
           //      packet->data[i] = (packet->data[i] & 0xF0) | gChannel;
           // }
     // 
-     // packet = MIDIPacketNext(packet);
+     packet = MIDIPacketNext(packet);
         }
+		printf("status byte %X data byte 1: %X data byte 2: %X\n\t tick count %d\n\t BAR: %d\n\t QARTER: %d\n\t EIGTH: %d\n\t SEIXTEENTH: %d\n\e[2J\e[f",
+				packet->data[i], 
+				packet->data[i+1], 
+				packet->data[i+2],
+				transport.tick_count,
+				transport.bar,
+				transport.quarter,
+				transport.eigth,
+				transport.sixteinth);
+
+    	// printf("\ttick count: %d\n\tbar: %d\n", transport.tick_count, transport.bar); //\e[2J\e[f
     }
-    
-    if (j > 100) {
-        exit(0);
-    }
+
 }
 
 
@@ -172,6 +199,15 @@ VALUE client_init(int argc, VALUE *argv, VALUE self)
     
     rb_iv_set(self, "@name", name);
     rb_iv_set(self, "@queue", Qnil);
+
+	// initialize transport
+	transport.tempo 	 = 0;
+	transport.tick_count = 0;
+	transport.bar		 = 0;
+	transport.quarter	 = 0;
+	transport.eigth		 = 0;
+	transport.sixteinth  = 0;
+	
     return self;
 }
 
