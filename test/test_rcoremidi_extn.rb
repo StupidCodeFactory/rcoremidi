@@ -2,7 +2,7 @@ require "test/unit"
 require File.dirname(__FILE__) + '/test_helper.rb'
 
 
-class TestRCoremidiExtn < Test::Unit::TestCase
+class TestRCoreMidiExtn < Test::Unit::TestCase
   def setup
     @conn_manager = RCoreMidi::ConnectionManager.devices
   end

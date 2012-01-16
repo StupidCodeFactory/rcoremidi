@@ -77,5 +77,5 @@ Init_rcoremidi()
 
 
   /* nothing here yet */
-    printf("extension rcoremidi got loaded!\n"); /* TODO: remove me */
+    // printf("extension rcoremidi got loaded!\n"); /* TODO: remove me */
 }

@@ -17,7 +17,7 @@ module RCoreMidi
           return devices[c]
         end
       end
-
+      
   end  
     
 end

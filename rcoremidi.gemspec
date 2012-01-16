@@ -12,7 +12,7 @@ the osx CoreMidi Framework}
   s.email = ["ymarquet@gmail.com"]
   s.extensions = ["ext/rcoremidi/extconf.rb"]
   s.extra_rdoc_files = ["History.txt", "Manifest.txt", "PostInstall.txt"]
-  s.files = ["History.txt", "Manifest.txt", "PostInstall.txt", "README.rdoc", "Rakefile", "ext/rcoremidi/rcoremidi.c", "ext/rcoremidi/Base.h", "ext/rcoremidi/Client.c", "ext/rcoremidi/Client.h", "ext/rcoremidi/ConnectionManager.c", "ext/rcoremidi/ConnectionManager.h", "ext/rcoremidi/extconf.rb", "ext/rcoremidi/MidiPacket.c", "ext/rcoremidi/MidiPacket.h", "ext/rcoremidi/MidiQueue.c", "ext/rcoremidi/MidiQueue.h", "ext/rcoremidi/NotificationProcs.c", "ext/rcoremidi/NotificationProcs.h", "ext/rcoremidi/Ports.c", "ext/rcoremidi/Ports.h", "ext/rcoremidi/Source.c", "ext/rcoremidi/Source.h", "ext/rcoremidi/Timer.c", "ext/rcoremidi/Timer.h", "lib/rcoremidi.rb", "lib/rcoremidi/connection_manager.rb", "lib/rcoremidi/client.rb", "script/console", "script/destroy", "script/generate", "test/test_helper.rb", "test/test_rcoremidi.rb", "test/test_rcoremidi_extn.rb", "test/test_rcoremidi_live_midi.rb"]
+  s.files = `git ls-files`.split("\n")
   s.homepage = %q{http://github.com/yannmarquet/rcoremidi}
   s.post_install_message = %q{PostInstall.txt}
   s.rdoc_options = ["--main", "README.rdoc"]

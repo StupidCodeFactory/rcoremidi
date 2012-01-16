@@ -3,7 +3,6 @@ $:.unshift(File.dirname(__FILE__)) unless
 $:.unshift(File.join(File.dirname(__FILE__) + '/../ext/rcoremidi/')) unless
   $:.include?(File.join(File.dirname(__FILE__) + '/../ext/rcoremidi/')) || $:.include?(File.expand_path(File.join(File.dirname(__FILE__) + '/../ext/rcoremidi/')))
 
-puts $:.grep(/rcoremidi/).inspect
 require "rcoremidi/connection_manager"
 require "rcoremidi/client"
 begin
@@ -13,7 +12,7 @@ ensure
 
 end
 
-module RCoremidi
+module RCoreMidi
   VERSION = '0.0.1'
   
   
