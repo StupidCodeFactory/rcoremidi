@@ -5,6 +5,7 @@ $:.unshift(File.join(File.dirname(__FILE__) + '/../ext/rcoremidi/')) unless
 
 require "rcoremidi/connection_manager"
 require "rcoremidi/client"
+require "rcoremidi/gui/base"
 begin
   require 'rcoremidi.bundle'
 rescue Exception

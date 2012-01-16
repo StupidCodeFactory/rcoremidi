@@ -2,7 +2,7 @@ require "test/unit"
 require File.dirname(__FILE__) + '/test_helper.rb'
 
 
-class TestRCoreMidiExtn < Test::Unit::TestCase
+class TestRCoremidiExtn < Test::Unit::TestCase
   def setup
     @conn_manager = RCoreMidi::ConnectionManager.devices
   end
@@ -37,16 +37,6 @@ class TestRCoreMidiExtn < Test::Unit::TestCase
     client = RCoreMidi::Client.new "name"
     client.name = "Test_client"
     assert_equal client.name, "Test_client", "Client name attirubute could not be changed"
-  end
-  
-  def test_assert_client_has_input_instance_variable
-    client = RCoreMidi::Client.new "name"
-    assert_not_nil client.input, "Client has no input port"
-  end
-  
-  def test_assert_client_has_output_instance_variable
-    client = RCoreMidi::Client.new "name"
-    assert_not_nil client.output, "Client has no output port"
   end
   
   def test_assert_client_has_client_ref_instance_variable
