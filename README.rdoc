@@ -1,6 +1,6 @@
 = rcoremidi
 
-* http://github.com/yannmarquet/rcoremidi
+* https://github.com/StupidCodeFactory/rcoremidi
 
 == DESCRIPTION:
 
