@@ -7,6 +7,7 @@ module RCoreMidi
       }
 
       def method_missing(method)
+        # TODO: call super! ...damn it!
         print ACTIONS[method] if ACTIONS.has_key?(method)
       end
     end
