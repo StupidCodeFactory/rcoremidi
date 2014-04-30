@@ -25,16 +25,16 @@ const rb_data_type_t midi_endpoint_data_t = {
     midi_endpoint_mark, midi_endpoint_free, midi_endpoint_memsize
 };
 
-VALUE source_alloc(VALUE klass)
-{
-    MIDIEndpointRef *endpoint = ALLOC(MIDIEndpointRef);
-    VALUE obj = TypedData_Wrap_Struct(klass, &midi_endpoint_data_t, endpoint);
-    return obj;
-}
+/* VALUE source_alloc(VALUE klass) */
+/* { */
+/*     MIDIEndpointRef *endpoint = ALLOC(MIDIEndpointRef); */
+/*     VALUE obj = TypedData_Wrap_Struct(klass, &midi_endpoint_data_t, endpoint); */
+/*     return obj; */
+/* } */
 
 
-VALUE source_init(VALUE self, VALUE name)
-{
-    rb_iv_set(self, "@name", name);
-    return self;
-}
+/* VALUE source_init(VALUE self, VALUE name) */
+/* { */
+/*     rb_iv_set(self, "@name", name); */
+/*     return self; */
+/* } */

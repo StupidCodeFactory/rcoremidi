@@ -1,8 +1,11 @@
-source :rubygems
-source 'http://gems.github.com'
+source 'https://rubygems.org'
 
 gem 'hoe'
 gem 'newgem'
 gem 'rdoc'
-gem 'rspec', '2.8.0'
-gem 'activesupport', '3.1.3', :require => 'active_support/core_ext'
+gem 'rspec'
+gem 'activesupport', '~> 4.1.0', require: 'active_support/core_ext'
+gem 'rake-compiler'
+gem 'musicalism', path: '../musicalism'
+gem 'pry'
+gem 'byebug'

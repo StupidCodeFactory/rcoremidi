@@ -1,7 +1,9 @@
 require 'mkmf'
 
-$CPPFLAGS += "-I/System/Library/Frameworks/Ruby.framework/Headers/ -I/System/Library/Frameworks/CoreMIDI.framework/Headers"
-$LDFLAGS += "-framework Ruby -framework CoreMIDI -framework CoreFoundation -framework CoreAudio -framework Carbon"
+$CFLAGS   += " -g "
+$CPPFLAGS += " -g "
+$CPPFLAGS += "-I/Users/yann/.rbenv/versions/2.1.1/include/ruby-2.1.0 -I/System/Library/Frameworks/CoreMIDI.framework/Headers "
+$LDFLAGS  += " -F/System/Library/Frameworks  -framework CoreMIDI -framework CoreFoundation -framework CoreAudio -framework Carbon"
 dir_config("rcoremidi")
 
 create_makefile("rcoremidi")

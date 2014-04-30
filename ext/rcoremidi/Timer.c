@@ -9,7 +9,7 @@ VALUE init_timer(VALUE self, VALUE tempo)
 VALUE at(VALUE self, VALUE timestamp, VALUE block)
 {
 	if (rb_obj_is_kind_of(timestamp, rb_cTime) == Qtrue) {
-		timestamp = time_to_f(timestamp);
+		/* timestamp = time_to_f(timestamp); */
 		printf("%ld\n", timestamp);
 	}
 

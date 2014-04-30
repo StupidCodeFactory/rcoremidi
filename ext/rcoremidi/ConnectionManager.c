@@ -2,6 +2,12 @@
 
 
 
+VALUE get_number_of_devices()
+{
+        return UINT2NUM(MIDIGetNumberOfDevices());
+}
+
+
 VALUE get_devices()
 {
     VALUE arr = rb_ary_new();
@@ -32,4 +38,3 @@ VALUE get_devices()
     }
     return sources;
 }
-

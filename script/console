@@ -1,10 +1,39 @@
 #!/usr/bin/env ruby
-require 'rubygems'
 require 'irb'
-require 'irb/completion'
+# require 'irb/rubinius'
+
 require "#{File.dirname(__FILE__) + '/../lib/rcoremidi.rb'}"
 require "bundler/setup"
-
-Bundler.require
+require 'byebug'
+Bundler.require :default
 ARGV.clear
-IRB.start
+
+
+
+require 'rcoremidi'
+client = RCoreMidi::Client.new("Bob")
+client.connect_to RCoreMidi::ConnectionManager.devices[1]
+
+include RCoreMidi::DSL
+
+
+live client do
+
+  # instrument :drum, 1 do
+  #   add 'C3', [ 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0 ]
+  #   add 'D3', [ 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0 ]
+  # end
+
+end
+
+
+
+
+
+
+c_index = Musicalism::Note::NOTES.index { |n| n.include? "C" }
+notes = Musicalism::Note::NOTES[c_index..-1]
+notes += Musicalism::Note::NOTES[0..(c_index-1)]
+puts client.inspect
+# client.start
+# IRB.start(__FILE__)
