@@ -127,7 +127,6 @@ Init_rcoremidi()
          * RCoreMidi::Device
          */
         rb_cDevice = rb_define_class_under(rb_mRCOREMIDI, "Device", rb_cObject);
-        /* rb_define_singleton_method(rb_cDevice, "get_number_of_devices", get_number_of_devices, 0); */
         rb_cvar_set(rb_cDevice, devices_intern, rb_ary_new());
         rb_cvar_set(rb_cDevice, lock_intern, rb_mutex_new());
         rb_define_singleton_method(rb_cDevice, "all", find_all, 0);
