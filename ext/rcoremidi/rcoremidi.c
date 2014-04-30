@@ -1,4 +1,4 @@
-#include "Base.h"
+#include "rcoremidi.h"
 
 VALUE rb_mRCOREMIDI;
 VALUE rb_cMIDIObject;
@@ -163,20 +163,8 @@ Init_rcoremidi()
         rb_define_attr(rb_cDestination, "uid", 1, 0);
 
         /*
-         * RCoreMidi::Endpoint
-         */
-        rb_cEndpoint =  rb_define_class_under(rb_mRCOREMIDI, "Endpoint", rb_cObject);
-
-        /*
-         * RCoreMidi::Port
-         */
-        rb_cPort =  rb_define_class_under(rb_mRCOREMIDI, "Port", rb_cObject);
-        rb_define_method(rb_cPort, "initialize", port_init, 0);
-        rb_define_attr(rb_cPort, "port_ref", 1, 0);
-        /*
          * RCoreMidi::Client
          */
-
         rb_cClient =  rb_define_class_under(rb_mRCOREMIDI, "Client", rb_cObject);
         rb_define_alloc_func(rb_cClient, client_alloc);
         rb_define_method(rb_cClient, "initialize", client_init, -1);

@@ -6,11 +6,8 @@
 #include <CoreMIDI/MIDIServices.h>
 #include <pthread.h>
 #include <stdbool.h>
-#include "Client.h"
-#include "Ports.h"
-#include "entity.h"
+#include "client.h"
 #include "midi_object.h"
-#include "ConnectionManager.h"
 
 
 extern VALUE rb_cConectionManager;
