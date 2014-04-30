@@ -41,28 +41,6 @@ set_name_from_properties(CFPropertyListRef *midi_properties, CFStringRef *name)
 }
 
 static VALUE
-create_entity_obj(MIDIEntityRef *midi_object)
-{
-        OSStatus error;
-        CFPropertyListRef midi_properties;
-        error = MIDIObjectGetProperties(*midi_object, &midi_properties, true);
-
-        CFStringRef name;
-        CFNumberRef uniqueID;
-        SInt64 uid;
-
-        set_name_from_properties(&midi_properties, &name);
-        set_uid_from_properties(&midi_properties, &uniqueID, &uid);
-
-        VALUE midi_entity = rb_funcall(rb_cEntity, new_intern, 0);
-
-        rb_iv_set(midi_entity, "@name", rb_str_new2(CFStringGetCStringPtr(name, kCFStringEncodingUTF8)));
-        rb_iv_set(midi_entity, "@uid", INT2FIX(uid));
-
-        return midi_entity;
-}
-
-static VALUE
 create_source_obj(MIDIEndpointRef *midi_object)
 {
 
@@ -95,6 +73,49 @@ create_destination_obj(MIDIEndpointRef *midi_object)
         rb_iv_set(midi_destination, "@uid", INT2FIX(uid));
 
         return midi_destination;
+}
+
+static VALUE
+create_entity_obj(MIDIEntityRef *midi_object)
+{
+        OSStatus error;
+        CFPropertyListRef midi_properties;
+        error = MIDIObjectGetProperties(*midi_object, &midi_properties, true);
+
+        CFStringRef name;
+        CFNumberRef uniqueID;
+        SInt64 uid;
+
+        ItemCount   endpoints_count;
+        ItemCount   i;
+
+
+        set_name_from_properties(&midi_properties, &name);
+        set_uid_from_properties(&midi_properties, &uniqueID, &uid);
+
+        VALUE midi_entity  = rb_funcall(rb_cEntity, new_intern, 0);
+        VALUE rb_endpoints = rb_ary_new();
+        rb_iv_set(midi_entity, "@name", rb_str_new2(CFStringGetCStringPtr(name, kCFStringEncodingUTF8)));
+        rb_iv_set(midi_entity, "@uid", INT2FIX(uid));
+        rb_iv_set(midi_entity, "@endpoints", rb_endpoints);
+
+        endpoints_count = MIDIEntityGetNumberOfSources(*midi_object);
+        for (i = 0; i < endpoints_count; ++i)
+        {
+                MIDIEntityRef midi_source = MIDIEntityGetSource(*midi_object, i);
+                MIDIObjectGetProperties(midi_source, &midi_properties, true);
+                rb_ary_push(rb_endpoints, create_source_obj(&midi_source));
+        }
+
+        endpoints_count = MIDIEntityGetNumberOfDestinations(*midi_object);
+        for (i = 0; i < endpoints_count; ++i)
+        {
+                MIDIEntityRef midi_destination = MIDIEntityGetDestination(*midi_object, i);
+                MIDIObjectGetProperties(midi_destination, &midi_properties, true);
+                rb_ary_push(rb_endpoints, create_destination_obj(&midi_destination));
+        }
+
+        return midi_entity;
 }
 
 static VALUE

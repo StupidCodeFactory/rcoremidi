@@ -16,7 +16,7 @@ module RCoreMidi
           its(:driver)       { should eq('com.apple.AppleMIDIIACDriver') }
           its(:manufacturer) { should eq('Apple Inc.') }
           its(:uid)          { should eq(191445378) }
-          its(:entities)     { should_not be_empty }
+          its(:entities)     { should have(1).item }
         end
 
         describe 'when getting an entity' do
@@ -25,6 +25,7 @@ module RCoreMidi
           its(:class)        { should eq(RCoreMidi::Entity) }
           its(:uid)          { should eq(411021342) }
           its(:name)         { should eq('Bus 1') }
+          its(:endpoints)    { should have(2).items }
         end
 
         describe 'when getting a source' do
@@ -41,14 +42,6 @@ module RCoreMidi
           its(:uid)          { should eq(1912813983) }
         end
 
-      end
-    end
-
-    describe RCoreMidi::Device do
-      let(:uid) { 191445378 }
-
-      it 'has entities' do
-        its(:entities)
       end
     end
 

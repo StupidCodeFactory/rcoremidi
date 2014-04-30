@@ -115,7 +115,7 @@ Init_rcoremidi()
         rb_define_alloc_func(rb_cDevice, midi_object_alloc);
         rb_define_attr(rb_cEntity, "uid", 1, 0);
         rb_define_attr(rb_cEntity, "name", 1, 0);
-
+        rb_define_attr(rb_cEntity, "endpoints", 1, 0);
 
         /*
          * RCoreMidi::Source
