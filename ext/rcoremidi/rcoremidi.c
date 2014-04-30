@@ -12,17 +12,39 @@ VALUE rb_cClient;
 VALUE rb_cPort;
 VALUE rb_cMidiQueue;
 VALUE rb_cMidiPacket;
-VALUE rb_cTimer;
-
+VALUE cb_thread;
 
 ID new_intern;
+ID devices_intern;
+ID empty_intern;
+ID lock_intern;
 
-VALUE cb_thread;
 static ID on_tick_intern;
 
 pthread_mutex_t g_callback_mutex  = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t  g_callback_cond   = PTHREAD_COND_INITIALIZER;
 callback_t      *g_callback_queue = NULL;
+
+
+void midi_endpoint_free(void *ptr)
+{
+    MIDIEndpointRef *tmp = ptr;
+    if(tmp) {
+        free(tmp);
+    }
+}
+
+size_t midi_endpoint_memsize(const void *ptr)
+{
+    return ptr ? sizeof(MIDIEndpointRef) : 0;
+}
+
+
+const rb_data_type_t midi_endpoint_data_t = {
+    "midi_enpoint",
+    0, midi_endpoint_free, midi_endpoint_memsize
+};
+
 
 void g_callback_queue_push(callback_t *callback)
 {
@@ -40,7 +62,7 @@ static callback_t *g_callback_queue_pop(void)
         return callback;
 }
 
-static VALUE wait_for_callback_signal(void * w) {
+static void *wait_for_callback_signal(void * w) {
         callback_waiting_t *waiting = (callback_waiting_t*) w;
 
         pthread_mutex_lock(&g_callback_mutex);
@@ -52,7 +74,7 @@ static VALUE wait_for_callback_signal(void * w) {
 
         pthread_mutex_unlock(&g_callback_mutex);
 
-        return Qnil;
+        return NULL;
 }
 
 static void stop_waiting_for_callback_signal(void *w)
@@ -71,7 +93,7 @@ static VALUE boot_callback_event_thread(void * data) {
         };
 
         while (waiting.abort == false) {
-                rb_thread_blocking_region(wait_for_callback_signal, &waiting, stop_waiting_for_callback_signal, &waiting);
+                rb_thread_call_without_gvl(wait_for_callback_signal, &waiting, stop_waiting_for_callback_signal, &waiting);
                 if (waiting.callback)
                 {
                         VALUE client = (VALUE)waiting.callback->data;
@@ -91,6 +113,11 @@ static VALUE boot_callback_event_thread(void * data) {
 void
 Init_rcoremidi()
 {
+        on_tick_intern = rb_intern("on_tick");
+        new_intern     = rb_intern("new");
+        devices_intern = rb_intern("@@devices");
+        empty_intern   = rb_intern("empty?");
+
         rb_mRCOREMIDI = rb_define_module("RCoreMidi");
 
         rb_cMIDIObject = rb_define_class_under(rb_mRCOREMIDI, "MIDIObject", rb_cObject);
@@ -100,13 +127,17 @@ Init_rcoremidi()
          * RCoreMidi::Device
          */
         rb_cDevice = rb_define_class_under(rb_mRCOREMIDI, "Device", rb_cObject);
-        rb_define_singleton_method(rb_cDevice, "get_number_of_devices", get_number_of_devices, 0);
+        /* rb_define_singleton_method(rb_cDevice, "get_number_of_devices", get_number_of_devices, 0); */
+        rb_cvar_set(rb_cDevice, devices_intern, rb_ary_new());
+        rb_cvar_set(rb_cDevice, lock_intern, rb_mutex_new());
+        rb_define_singleton_method(rb_cDevice, "all", find_all, 0);
         rb_define_alloc_func(rb_cDevice, midi_object_alloc);
         rb_define_attr(rb_cDevice, "name", 1, 0);
         rb_define_attr(rb_cDevice, "driver", 1, 0);
         rb_define_attr(rb_cDevice, "manufacturer", 1, 0);
         rb_define_attr(rb_cDevice, "uid", 1, 0);
         rb_define_attr(rb_cDevice, "entities", 1, 0);
+
 
         /*
          * RCoreMidi::Entity
@@ -151,39 +182,11 @@ Init_rcoremidi()
         rb_define_method(rb_cClient, "initialize", client_init, -1);
         rb_define_method(rb_cClient, "connect_to", connect_to, 1);
         rb_define_method(rb_cClient, "dispose", dispose_client, 0);
-        rb_define_attr(rb_cClient, "name", 1, 1);
-        rb_define_attr(rb_cClient, "queue", 1, 1);
-        rb_define_attr(rb_cClient, "is_connected", 1, 1);
         rb_define_method(rb_cClient, "on_tick", midi_in_callback, 0);
+        rb_define_attr(rb_cClient, "name", 1, 1);
+        rb_define_attr(rb_cClient, "is_connected", 1, 1);
 
          cb_thread = rb_thread_create(boot_callback_event_thread, NULL);
          rb_funcall(cb_thread, rb_intern("abort_on_exception="), 1, Qtrue);
 
-
-        rb_cMidiPacket = rb_define_class_under(rb_mRCOREMIDI, "MidiPacket", rb_cObject);
-
-        /*
-         * RCoreMidi::MidiQueue
-         */
-        rb_cMidiQueue = rb_define_class_under(rb_mRCOREMIDI, "MidiQueue", rb_cObject);
-        rb_define_method(rb_cMidiQueue, "initialize", init_midi_queue, 0);
-        rb_define_attr(rb_cMidiQueue, "queue", 1, 1);
-
-        /*
-         * RCoreMidi::Source
-         */
-        rb_cConectionManager = rb_define_class_under(rb_mRCOREMIDI, "ConnectionManager", rb_cObject);
-        rb_define_singleton_method(rb_cConectionManager, "devices", get_devices, 0);
-
-        /*
-         * RCoreMidi::Timer
-         */
-
-        rb_cTimer = rb_define_class_under(rb_mRCOREMIDI, "Timer", rb_cObject);
-        rb_define_method(rb_cTimer, "initialize", init_timer, 1);
-        rb_define_method(rb_cTimer, "start", start_timer, 0);
-        rb_define_attr(rb_cTimer, "tempo", 1, 1);
-
-        on_tick_intern = rb_intern("on_tick");
-        new_intern = rb_intern("new");
 }

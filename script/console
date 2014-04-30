@@ -12,7 +12,9 @@ ARGV.clear
 
 require 'rcoremidi'
 client = RCoreMidi::Client.new("Bob")
-client.connect_to RCoreMidi::ConnectionManager.devices[1]
+
+# client.connect_to
+ # RCoreMidi::ConnectionManager.devices[1]
 
 include RCoreMidi::DSL
 
@@ -35,5 +37,5 @@ c_index = Musicalism::Note::NOTES.index { |n| n.include? "C" }
 notes = Musicalism::Note::NOTES[c_index..-1]
 notes += Musicalism::Note::NOTES[0..(c_index-1)]
 puts client.inspect
-# client.start
+client.start
 # IRB.start(__FILE__)

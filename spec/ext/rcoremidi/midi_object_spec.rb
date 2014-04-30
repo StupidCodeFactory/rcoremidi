@@ -7,7 +7,6 @@ module RCoreMidi
     describe MIDIObject do
       describe '.find_by_unique_id' do
 
-
         describe 'when getting a device' do
           let(:uid) { 191445378 }
 
@@ -41,9 +40,16 @@ module RCoreMidi
           its(:class)        { should eq(RCoreMidi::Destination) }
           its(:uid)          { should eq(1912813983) }
         end
-
       end
     end
 
+    describe Device do
+      describe '.all' do
+        it 'returns devices' do
+          puts Device.all.inspect
+          expect(Device.all).to_not be_empty
+        end
+      end
+    end
   end
 end

@@ -1,6 +1,6 @@
-#ifndef CONNECTION_MANAGER_H
-#define CONNECTION_MANAGER_H
-#endif
+/* #ifndef CONNECTION_MANAGER_H */
+/* #define CONNECTION_MANAGER_H */
+/* #endif */
 
-VALUE get_number_of_devices();
-VALUE get_devices();
+/* VALUE get_number_of_devices(); */
+/* VALUE get_devices(); */

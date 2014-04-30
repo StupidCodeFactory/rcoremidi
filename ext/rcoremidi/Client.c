@@ -7,8 +7,6 @@
  *
  */
 
-static RCoremidiNode *midi_nodes;
-;
 static void midi_node_free(void *ptr)
 {
         RCoremidiNode *tmp = ptr;
@@ -182,8 +180,8 @@ static void MidiReadProc(const MIDIPacketList *pktlist, void *refCon, void *conn
                                 packet->data[i] = (packet->data[i] & 0xF0) | 0;
                         }
 
-                        /* printf("status byte %X data byte 1: %X data byte 2: %X\n", */
-                        /*        packet->data[i], packet->data[i+1], packet->data[i+2]); */
+                        /* printf("status byte %X data byte 1: %X data byte 2: %X\n",
+                                packet->data[i], packet->data[i+1], packet->data[i+2]); */
 
                 }
 
@@ -228,7 +226,6 @@ VALUE client_init(int argc, VALUE *argv, VALUE self)
         }
 
         rb_iv_set(self, "@name", name);
-        rb_iv_set(self, "@queue", Qnil);
 
         return self;
 }

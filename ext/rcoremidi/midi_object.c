@@ -1,5 +1,7 @@
 #include "Base.h"
 
+
+
 static void
 midi_object_free(void * ptr)
 {
@@ -165,14 +167,14 @@ find_by_unique_id(VALUE klass, VALUE uid)
 
         /* TODO: check for NULL pointer */
         MIDIObjectRef  *outObject     = malloc(sizeof(MIDIObjectRef));
-        MIDIObjectType *outObjectType = malloc(sizeof(MIDIObjectType));
+        MIDIObjectType outObjectType;
 
-        MIDIObjectFindByUniqueID((MIDIUniqueID)FIX2INT(uid), outObject, outObjectType);
+        MIDIObjectFindByUniqueID((MIDIUniqueID)FIX2INT(uid), outObject, &outObjectType);
 
 
         /* CFShow(midi_properties); */
 
-        switch(*outObjectType) {
+        switch(outObjectType) {
         case kMIDIObjectType_Device:
                 return create_device_obj((MIDIDeviceRef *)outObject);
         case kMIDIObjectType_Entity:
@@ -187,4 +189,48 @@ find_by_unique_id(VALUE klass, VALUE uid)
 
         }
         return Qnil;
+}
+
+static void populate_devices(VALUE klass)
+{
+        MIDIObjectType outObjectType;
+        SInt64            uid;
+
+        ItemCount devices_count = MIDIGetNumberOfDevices();
+        ItemCount i;
+
+        OSStatus error;
+        CFPropertyListRef midi_properties;
+        CFNumberRef       uniqueID;
+
+        VALUE devices = rb_cvar_get(klass, devices_intern);
+
+        for (i = 0; i < devices_count - 1; ++i)
+        {
+                MIDIDeviceRef midi_device = MIDIGetDevice(i);
+                error = MIDIObjectGetProperties(midi_device, &midi_properties, true);
+
+                if(error != noErr) {
+                        rb_raise(rb_eRuntimeError, "Could not get properties for midi devices");
+                }
+
+                set_uid_from_properties(&midi_properties, &uniqueID, &uid);
+                MIDIObjectFindByUniqueID((MIDIUniqueID)uid, &midi_device, &outObjectType);
+                rb_ary_push(devices, create_device_obj(&midi_device));
+                midi_device++;
+        }
+}
+
+VALUE
+find_all(VALUE klass)
+{
+        VALUE mutex_lock = rb_cvar_get(klass, lock_intern);
+        VALUE devices = rb_cvar_get(klass, devices_intern);
+        rb_mutex_lock(mutex_lock);
+        if (Qtrue == rb_funcall(devices, empty_intern, 0)) {
+                populate_devices(klass);
+        }
+        rb_mutex_unlock(mutex_lock);
+        return devices;
+
 }
