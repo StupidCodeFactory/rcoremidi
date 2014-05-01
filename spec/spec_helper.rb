@@ -1,6 +1,6 @@
 require "bundler/setup"
 
-Bundler.setup
+Bundler.require(:default)
 require 'rspec'
 require 'rcoremidi'
 

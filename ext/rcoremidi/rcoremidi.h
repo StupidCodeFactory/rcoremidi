@@ -22,11 +22,13 @@ extern VALUE rb_cMidiQueue;
 extern VALUE rb_cMidiPacket;
 extern VALUE rb_cTimer;
 
-extern ID    on_tick; /* TODO: remove? */
-extern ID    new_intern;
+extern ID on_tick; /* TODO: remove? */
+extern ID new_intern;
 extern ID devices_intern;
 extern ID empty_intern;
 extern ID lock_intern;
+extern ID length_intern;
+extern ID pack_intern;
 
 extern const rb_data_type_t midi_endpoint_data_t;
 

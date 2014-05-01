@@ -1,12 +1,5 @@
 #include "rcoremidi.h"
 
-/*
- * RCoreMidi::Client
- *
- *
- *
- */
-
 static void midi_node_free(void *ptr)
 {
         RCoremidiNode *tmp = ptr;
@@ -190,6 +183,44 @@ static void MidiReadProc(const MIDIPacketList *pktlist, void *refCon, void *conn
 
 }
 
+VALUE connect_to(VALUE self, VALUE source)
+{
+        RCoremidiNode *clientNode;
+        TypedData_Get_Struct(self, RCoremidiNode, &midi_node_data_t, clientNode);
+
+        MIDIEndpointRef *endpt;
+        TypedData_Get_Struct(source, MIDIEndpointRef, &midi_endpoint_data_t, endpt);
+
+        OSStatus connected;
+        connected = MIDIPortConnectSource(*clientNode->in, *endpt, (void *)self);
+        if (connected != noErr) {
+                rb_raise(rb_eRuntimeError, "Could not connect ouyput port tout source");
+        }
+        rb_iv_set(self, "@source", source);
+        rb_iv_set(self, "@is_connected", Qtrue);
+        return self;
+}
+
+
+VALUE send(VALUE self, VALUE destination, VALUE midi_stream)
+{
+        VALUE stream_length = rb_funcall(midi_stream, length_intern, 0);
+        VALUE format        = rb_str_times(rb_str_new2("C"), stream_length);
+        VALUE bytes         = rb_funcall(midi_stream, pack_intern, format);
+
+        RCoremidiNode *clientNode;
+        TypedData_Get_Struct(self, RCoremidiNode, &midi_node_data_t, clientNode);
+
+        MIDIPortRef *out = clientNode->out;
+
+        MIDIEndpointRef *destination;
+        TypedData_Get_Struct(destination, MIDIEndpointRef, &midi_object_data_t, destination);
+
+        MIDIPacketList  *packet_list = malloc(256);
+        MIDIPacket *packet = MIDIPacketListInit(&packet_list);
+        packet = MIDIPacketListAdd(&packet_list, packet_list-> FIX2UINT(stream_length), packet, 0, StringValuePtr(bytes));
+}
+
 VALUE client_init(int argc, VALUE *argv, VALUE self)
 {
         VALUE name;
@@ -227,24 +258,6 @@ VALUE client_init(int argc, VALUE *argv, VALUE self)
 
         rb_iv_set(self, "@name", name);
 
-        return self;
-}
-
-VALUE connect_to(VALUE self, VALUE source)
-{
-        RCoremidiNode *clientNode;
-        TypedData_Get_Struct(self, RCoremidiNode, &midi_node_data_t, clientNode);
-
-        MIDIEndpointRef *endpt;
-        TypedData_Get_Struct(source, MIDIEndpointRef, &midi_endpoint_data_t, endpt);
-
-        OSStatus connected;
-        connected = MIDIPortConnectSource(*clientNode->in, *endpt, (void *)self);
-        if (connected != noErr) {
-                rb_raise(rb_eRuntimeError, "Could not connect ouyput port tout source");
-        }
-        rb_iv_set(self, "@source", source);
-        rb_iv_set(self, "@is_connected", Qtrue);
         return self;
 }
 

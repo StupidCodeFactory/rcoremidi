@@ -1,11 +1,10 @@
 # -*- encoding: utf-8 -*-
-
+$:.unshift File.expand_path(File.join(File.dirname(__FILE__), 'lib'))
+require 'rcoremidi/version'
 Gem::Specification.new do |s|
   s.name = %q{rcoremidi}
-  s.version = "0.0.1"
+  s.version = RCoreMidi::VERSION
 
-  s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
-  s.authors = ["Yann Marquet"]
   s.date = %q{2010-08-14}
   s.description = %q{This is a ruby extension to provide a wrapper for
 the osx CoreMidi Framework}
@@ -20,21 +19,14 @@ the osx CoreMidi Framework}
   s.rubyforge_project = %q{rcoremidi}
   s.rubygems_version = %q{1.3.7}
   s.summary = %q{This is a ruby extension to provide a wrapper for the osx CoreMidi Framework}
-  s.test_files = ["test/test_helper.rb", "test/test_rcoremidi.rb", "test/test_rcoremidi_extn.rb", "test/test_rcoremidi_live_midi.rb"]
+  s.test_files = Dir['spec/**/*.rb']
 
-  if s.respond_to? :specification_version then
-    current_version = Gem::Specification::CURRENT_SPECIFICATION_VERSION
-    s.specification_version = 3
+  s.add_dependency 'activesupport'
+  s.add_development_dependency 'guard-rake'
+  s.add_development_dependency 'guard-rspec'
+  s.add_development_dependency 'rdoc'
+  s.add_development_dependency 'rspec'
+  s.add_development_dependency 'rake-compiler'
+  s.add_development_dependency 'byebug'
 
-    if Gem::Version.new(Gem::VERSION) >= Gem::Version.new('1.2.0') then
-      s.add_development_dependency(%q<rubyforge>, [">= 2.0.4"])
-      s.add_development_dependency(%q<hoe>, [">= 2.6.1"])
-    else
-      s.add_dependency(%q<rubyforge>, [">= 2.0.4"])
-      s.add_dependency(%q<hoe>, [">= 2.6.1"])
-    end
-  else
-    s.add_dependency(%q<rubyforge>, [">= 2.0.4"])
-    s.add_dependency(%q<hoe>, [">= 2.6.1"])
-  end
 end

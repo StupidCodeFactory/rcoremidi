@@ -18,6 +18,8 @@ ID new_intern;
 ID devices_intern;
 ID empty_intern;
 ID lock_intern;
+ID length_intern;
+ID pack_intern;
 
 static ID on_tick_intern;
 
@@ -117,6 +119,7 @@ Init_rcoremidi()
         new_intern     = rb_intern("new");
         devices_intern = rb_intern("@@devices");
         empty_intern   = rb_intern("empty?");
+        length_intern  = rb_intern("length");
 
         rb_mRCOREMIDI = rb_define_module("RCoreMidi");
 
