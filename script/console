@@ -19,14 +19,14 @@ client = RCoreMidi::Client.new("Bob")
 include RCoreMidi::DSL
 
 
-live client do
+# live client do
 
   # instrument :drum, 1 do
   #   add 'C3', [ 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0 ]
   #   add 'D3', [ 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0 ]
   # end
 
-end
+# end
 
 
 

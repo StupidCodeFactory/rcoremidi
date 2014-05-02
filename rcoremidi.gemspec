@@ -4,7 +4,7 @@ require 'rcoremidi/version'
 Gem::Specification.new do |s|
   s.name = %q{rcoremidi}
   s.version = RCoreMidi::VERSION
-
+  s.authors = ['StupidCodeFactory <ymarquet@gmail.com>']
   s.date = %q{2010-08-14}
   s.description = %q{This is a ruby extension to provide a wrapper for
 the osx CoreMidi Framework}
@@ -28,5 +28,5 @@ the osx CoreMidi Framework}
   s.add_development_dependency 'rspec'
   s.add_development_dependency 'rake-compiler'
   s.add_development_dependency 'byebug'
-
+  s.add_development_dependency 'terminal-notifier-guard'
 end

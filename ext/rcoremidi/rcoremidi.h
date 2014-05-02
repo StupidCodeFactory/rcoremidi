@@ -31,6 +31,7 @@ extern ID length_intern;
 extern ID pack_intern;
 
 extern const rb_data_type_t midi_endpoint_data_t;
+extern const rb_data_type_t midi_object_data_t;
 
 typedef struct callback_t {
 pthread_mutex_t mutex;
@@ -78,6 +79,7 @@ enum MidiState
         kMIDIStoped  = 1
 };
 
+void   no_err(const OSStatus status, const char *error_message);
 void   midi_endpoint_free(void *ptr);
 size_t midi_endpoint_memsize(const void *ptr);
 

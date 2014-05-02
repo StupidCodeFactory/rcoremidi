@@ -28,6 +28,13 @@ pthread_cond_t  g_callback_cond   = PTHREAD_COND_INITIALIZER;
 callback_t      *g_callback_queue = NULL;
 
 
+void no_err(const OSStatus status, const char *error_message)
+{
+        if(status != noErr) {
+                rb_raise(rb_eRuntimeError, error_message, NULL);
+        }
+}
+
 void midi_endpoint_free(void *ptr)
 {
     MIDIEndpointRef *tmp = ptr;

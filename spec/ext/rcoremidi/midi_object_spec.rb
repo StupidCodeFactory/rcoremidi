@@ -46,7 +46,6 @@ module RCoreMidi
     describe Device do
       describe '.all' do
         it 'returns devices' do
-          puts Device.all.inspect
           expect(Device.all).to_not be_empty
         end
       end

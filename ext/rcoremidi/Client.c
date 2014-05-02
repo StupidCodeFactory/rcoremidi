@@ -174,7 +174,7 @@ static void MidiReadProc(const MIDIPacketList *pktlist, void *refCon, void *conn
                         }
 
                         /* printf("status byte %X data byte 1: %X data byte 2: %X\n",
-                                packet->data[i], packet->data[i+1], packet->data[i+2]); */
+                           packet->data[i], packet->data[i+1], packet->data[i+2]); */
 
                 }
 
@@ -189,16 +189,17 @@ VALUE connect_to(VALUE self, VALUE source)
         TypedData_Get_Struct(self, RCoremidiNode, &midi_node_data_t, clientNode);
 
         MIDIEndpointRef *endpt;
-        TypedData_Get_Struct(source, MIDIEndpointRef, &midi_endpoint_data_t, endpt);
+        TypedData_Get_Struct(source, MIDIEndpointRef, &midi_object_data_t, endpt);
 
-        OSStatus connected;
-        connected = MIDIPortConnectSource(*clientNode->in, *endpt, (void *)self);
-        if (connected != noErr) {
-                rb_raise(rb_eRuntimeError, "Could not connect ouyput port tout source");
-        }
+        CFPropertyListRef midi_properties;
+        MIDIObjectGetProperties(*clientNode->in, &midi_properties, true);
+        CFShow(midi_properties);
+
+        no_err(MIDIPortConnectSource( *clientNode->in, *endpt, NULL), "Could not connect ouyput port tout source");
+
         rb_iv_set(self, "@source", source);
         rb_iv_set(self, "@is_connected", Qtrue);
-        return self;
+        return Qtrue;
 }
 
 
@@ -213,12 +214,13 @@ VALUE send(VALUE self, VALUE destination, VALUE midi_stream)
 
         MIDIPortRef *out = clientNode->out;
 
-        MIDIEndpointRef *destination;
-        TypedData_Get_Struct(destination, MIDIEndpointRef, &midi_object_data_t, destination);
-
+        MIDIEndpointRef *midi_destination;
+        TypedData_Get_Struct(destination, MIDIObjectRef, &midi_object_data_t, midi_destination);
+        printf ("THERE\n");
         MIDIPacketList  *packet_list = malloc(256);
-        MIDIPacket *packet = MIDIPacketListInit(&packet_list);
-        packet = MIDIPacketListAdd(&packet_list, packet_list-> FIX2UINT(stream_length), packet, 0, StringValuePtr(bytes));
+        MIDIPacket      *packet      = MIDIPacketListInit(packet_list);
+        packet = MIDIPacketListAdd(packet_list, 256, packet, 0, stream_length, (unsigned char*)StringValuePtr(bytes));
+        return Qnil;
 }
 
 VALUE client_init(int argc, VALUE *argv, VALUE self)
