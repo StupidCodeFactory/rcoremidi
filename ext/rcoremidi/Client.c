@@ -188,14 +188,13 @@ VALUE connect_to(VALUE self, VALUE source)
         RCoremidiNode *clientNode;
         TypedData_Get_Struct(self, RCoremidiNode, &midi_node_data_t, clientNode);
 
-        MIDIEndpointRef *endpt;
-        TypedData_Get_Struct(source, MIDIEndpointRef, &midi_object_data_t, endpt);
+        MIDIEndpointRef *midi_source;
+        TypedData_Get_Struct(source, MIDIEndpointRef, &midi_object_data_t, midi_source);
 
         CFPropertyListRef midi_properties;
-        MIDIObjectGetProperties(*clientNode->in, &midi_properties, true);
-        CFShow(midi_properties);
+        MIDIObjectGetProperties(*midi_source, &midi_properties, true);
 
-        no_err(MIDIPortConnectSource( *clientNode->in, *endpt, NULL), "Could not connect ouyput port tout source");
+        no_err(MIDIPortConnectSource( *clientNode->in, *midi_source, NULL), "Could not connect ouyput port tout source");
 
         rb_iv_set(self, "@source", source);
         rb_iv_set(self, "@is_connected", Qtrue);
@@ -216,7 +215,7 @@ VALUE send(VALUE self, VALUE destination, VALUE midi_stream)
 
         MIDIEndpointRef *midi_destination;
         TypedData_Get_Struct(destination, MIDIObjectRef, &midi_object_data_t, midi_destination);
-        printf ("THERE\n");
+
         MIDIPacketList  *packet_list = malloc(256);
         MIDIPacket      *packet      = MIDIPacketListInit(packet_list);
         packet = MIDIPacketListAdd(packet_list, 256, packet, 0, stream_length, (unsigned char*)StringValuePtr(bytes));

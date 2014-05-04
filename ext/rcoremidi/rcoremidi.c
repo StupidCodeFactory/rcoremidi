@@ -30,6 +30,7 @@ callback_t      *g_callback_queue = NULL;
 
 void no_err(const OSStatus status, const char *error_message)
 {
+        printf ("%d\n", status);
         if(status != noErr) {
                 rb_raise(rb_eRuntimeError, error_message, NULL);
         }
@@ -152,7 +153,7 @@ Init_rcoremidi()
          * RCoreMidi::Entity
          */
         rb_cEntity = rb_define_class_under(rb_mRCOREMIDI, "Entity", rb_cObject);
-        rb_define_alloc_func(rb_cDevice, midi_object_alloc);
+        rb_define_alloc_func(rb_cEntity, midi_object_alloc);
         rb_define_attr(rb_cEntity, "uid", 1, 0);
         rb_define_attr(rb_cEntity, "name", 1, 0);
         rb_define_attr(rb_cEntity, "endpoints", 1, 0);

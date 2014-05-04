@@ -9,7 +9,7 @@ module RCoreMidi
 
       describe '#connect' do
         it 'can connect to a source' do
-          expect(client.connect_to(destination)).to be_true
+          expect(client.connect_to(source)).to be_true
         end
 
       end
