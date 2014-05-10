@@ -266,7 +266,8 @@ get_devices(VALUE devices, ItemCount count)
         }
 }
 
-static void populate_devices(VALUE klass)
+static void
+populate_devices(VALUE klass)
 {
         VALUE devices = rb_cvar_get(klass, devices_intern);
         ItemCount device_count = MIDIGetNumberOfDevices();
@@ -286,5 +287,4 @@ find_all(VALUE klass)
         }
         rb_mutex_unlock(mutex_lock);
         return devices;
-
 }

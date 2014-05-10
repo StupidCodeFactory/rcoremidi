@@ -24,7 +24,7 @@ module RCoreMidi
           its(:class)        { should eq(RCoreMidi::Entity) }
           its(:uid)          { should eq(411021342) }
           its(:name)         { should eq('Bus 1') }
-          its(:endpoints)    { should have(2).items }
+          its(:endpoints)    { puts subject.inspect; should have(2).items }
         end
 
         describe 'when getting a source' do

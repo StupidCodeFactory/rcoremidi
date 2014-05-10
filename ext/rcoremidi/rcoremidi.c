@@ -27,10 +27,14 @@ pthread_mutex_t g_callback_mutex  = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t  g_callback_cond   = PTHREAD_COND_INITIALIZER;
 callback_t      *g_callback_queue = NULL;
 
+VALUE rdebug(VALUE rb_obj)
+{
+        rb_funcall(rb_mKernel, (ID) rb_intern("puts"), rb_obj);
+        return Qnil;
+}
 
 void no_err(const OSStatus status, const char *error_message)
 {
-        printf ("%d\n", status);
         if(status != noErr) {
                 rb_raise(rb_eRuntimeError, error_message, NULL);
         }
@@ -106,12 +110,13 @@ static VALUE boot_callback_event_thread(void * data) {
                 rb_thread_call_without_gvl(wait_for_callback_signal, &waiting, stop_waiting_for_callback_signal, &waiting);
                 if (waiting.callback)
                 {
-                        VALUE client = (VALUE)waiting.callback->data;
-                        RCoremidiNode *clientNode = client_get_data(client);
+                        /* VALUE client = (VALUE)waiting.callback->data; */
+                        /* RCoremidiNode *clientNode = client_get_data(client); */
+                        RCoremidiNode *clientNode = (RCoremidiNode *)waiting.callback->data;
 
                         pthread_mutex_lock(&waiting.callback->mutex);
                         /* rb_funcall(client, on_tick_intern, 0); */
-                        rb_funcall(rb_mKernel, rb_intern("puts"), 1, rb_funcall(client, rb_intern("on_tick"), 0));
+                        /* rb_funcall(rb_mKernel, rb_intern("puts"), 1, rb_funcall(client, rb_intern("on_tick"), 0)); */
                         printf ("TRANSPORT: %d\n", clientNode->transport->tick_count);
                         pthread_mutex_unlock(&waiting.callback->mutex);
                 }
@@ -181,6 +186,7 @@ Init_rcoremidi()
         rb_define_method(rb_cClient, "connect_to", connect_to, 1);
         rb_define_method(rb_cClient, "dispose", dispose_client, 0);
         rb_define_method(rb_cClient, "on_tick", midi_in_callback, 0);
+        rb_define_method(rb_cClient, "send", send, 2);
         rb_define_attr(rb_cClient, "name", 1, 1);
         rb_define_attr(rb_cClient, "is_connected", 1, 1);
 

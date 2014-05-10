@@ -8,16 +8,26 @@ require 'byebug'
 Bundler.require :default
 ARGV.clear
 
-
+module RCoreMidi
 
 require 'rcoremidi'
-# client = RCoreMidi::Client.new("Bob")
+client = Client.new("Bob")
+device = Device.all.last
+puts device.name
 
-# puts "#{Process.pid} press any key to stat"
+puts "#{Process.pid} press any key to stat"
+gets
+destination = device.entities.first.endpoints.detect { |e| e.is_a? Destination }
+source      = Device.all.last.entities.first.endpoints.detect { |e| e.is_a? Source }
 
-puts RCoreMidi::Device.all.inspect
+client.connect_to source
 
-# client.connect_to
+loop do
+    puts "sendind"
+    client.send(destination, [90, 50, 100])
+    sleep 1
+end
+
  # RCoreMidi::ConnectionManager.devices[1]
 
 include RCoreMidi::DSL
@@ -43,3 +53,4 @@ include RCoreMidi::DSL
 # puts client.inspect
 # client.start
 # IRB.start(__FILE__)
+end

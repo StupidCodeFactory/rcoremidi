@@ -51,6 +51,14 @@ typedef struct callback_waiting_t {
         bool       abort;
 } callback_waiting_t;
 
+typedef struct midi_send_params_t {
+        MIDIPortRef     *out;
+        MIDIEndpointRef *midi_destination;
+        Byte            *data;
+        ByteCount       data_size;
+
+} midi_send_params_t;
+
 typedef struct RCoremidiNode
 {
         MIDIClientRef      *client;
@@ -85,3 +93,5 @@ size_t midi_endpoint_memsize(const void *ptr);
 
 void g_callback_queue_push(callback_t *callback);
 RCoremidiNode * client_get_data(VALUE self);
+
+VALUE rdebug(VALUE rb_obj);
