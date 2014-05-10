@@ -110,12 +110,9 @@ static void MidiReadProc(const MIDIPacketList *pktlist, void *refCon, void *conn
         unsigned int j;
         int i;
 
-        /* VALUE client = (VALUE)connRefCon; */
-        RCoremidiNode *clientNode = refCon;
-        /* TypedData_Get_Struct((VALUE)connRefCon, RCoremidiNode, &midi_node_data_t, clientNode); */
+        RCoremidiNode *clientNode     = (RCoremidiNode *)refCon;
+        RCoreMidiTransport *transport = (RCoreMidiTransport *)clientNode->transport;
 
-        RCoreMidiTransport *transport = clientNode->transport;
-        /* RCoreMidiTransport *transport = malloc(sizeof(RCoreMidiTransport)); */
         for (j = 0; j < pktlist->numPackets; ++j) {
 
                 for (i = 0; i < packet->length; ++i) {
@@ -211,51 +208,26 @@ static void *midi_send_no_gvl(void *data)
         MIDIPacket      *packet      = MIDIPacketListInit(packet_list);
         Byte * debug = params->data;
         /* Byte d[3] = {0x90, 0x34, 0x65}; */
-        printf ("debug - char: %s\n", (unsigned char *)debug);
+        /* printf ("debug - char: %s\n", (unsigned char *)debug); */
         /* params->data */
         /* params->data_size */
 
 
-        /* packet = MIDIPacketListAdd(packet_list, 256, packet, 0, 3, d); */
-        /* if (packet == NULL) */
-        /*         printf ("packet was null\n"); */
+        packet = MIDIPacketListAdd(packet_list, 1024, packet, 0, params->data_size, params->data);
+        if (packet == NULL)
+                printf ("drop some midi packet\n");
 
-        CFPropertyListRef midi_properties;
-
-        /* error = MIDIObjectGetProperties(params->out, &midi_properties, true); */
-        /* CFShow(midi_properties); */
-
-        error = MIDIObjectGetProperties(*params->midi_destination, &midi_properties, true);
-        CFShow(midi_properties);
-
-        MIDIPacketList packetList;
-
-        packetList.numPackets = 1;
-        packetList.packet[0].length = 3;
-        packetList.packet[0].data[0] = 0x90;
-        packetList.packet[0].data[1] = 0x34;
-        packetList.packet[0].data[2] = 0x65;
-        packetList.packet[0].timeStamp = 0;
-
-        error = MIDISend(*params->out, *params->midi_destination, &packetList);
+        error = MIDISend(*params->out, *params->midi_destination, packet_list);
 
         if(error != noErr) {
-                printf ("error: %d\n", error);
                 printf ("WARNING: Could not send midi packet\n");
-        } else {
-                printf(".");
         }
 
-        return (void *) ((error == noErr) ? Qtrue : Qfalse);
+        return NULL;
 }
 
 VALUE send(VALUE self, VALUE destination, VALUE midi_stream)
 {
-
-
-        /* VALUE stream_length = rb_funcall(midi_stream, length_intern, 0); */
-        /* VALUE format        = rb_str_times(rb_str_new2("C"), stream_length); */
-        /* VALUE bytes         = rb_funcall(midi_stream, pack_intern, format); */
         midi_send_params_t *midi_send_params = malloc(sizeof(midi_send_params_t));
         midi_send_params->data_size = NUM2ULONG(rb_funcall(midi_stream, length_intern, 0));
         long i;
@@ -263,15 +235,15 @@ VALUE send(VALUE self, VALUE destination, VALUE midi_stream)
         midi_send_params->data = midi_data;
 
         Byte *start = midi_send_params->data;
-
+        printf ("sending:");
         for (i = 0; i < midi_send_params->data_size; ++i)
         {
-                *midi_data = (Byte)NUM2UINT(rb_ary_entry(midi_stream, i));
-                /* printf ("char: 0x%02X\n", (Byte)NUM2CHR(rb_ary_entry(midi_stream, i))); */
-                printf ("char: %s\n", (unsigned char *)midi_send_params->data);
+                *midi_data = (Byte) NUM2UINT(rb_ary_entry(midi_stream, i));
+                printf (" 0x%02X", (Byte)NUM2UINT(rb_ary_entry(midi_stream, i)));
+                /* printf ("char: %s\n", (unsigned char *)midi_send_params->data); */
                 midi_data++;
         }
-
+        printf ("\n");
         RCoremidiNode *clientNode;
         TypedData_Get_Struct(self, RCoremidiNode, &midi_node_data_t, clientNode);
 
@@ -281,32 +253,10 @@ VALUE send(VALUE self, VALUE destination, VALUE midi_stream)
         TypedData_Get_Struct(destination, MIDIObjectRef, &midi_object_data_t, midi_destination);
 
         midi_send_params->midi_destination = midi_destination;
-        OSStatus error;
-        CFPropertyListRef midi_properties;
-
-        /* error = MIDIObjectGetProperties(midi_send_params->midi_destination, &midi_properties, true); */
-        /* CFShow(midi_properties); */
-
-        /* MIDIPacketList packetList; */
-
-        /* packetList.numPackets = 1; */
-        /* packetList.packet[0].length = 3; */
-        /* packetList.packet[0].data[0] = 0x90; */
-        /* packetList.packet[0].data[1] = 0x34; */
-        /* packetList.packet[0].data[2] = 0x65; */
-        /* packetList.packet[0].timeStamp = 0; */
-
-        /* MIDISend(*clientNode->out, *midi_destination, &packetList); */
 
         VALUE sent = (VALUE)rb_thread_call_without_gvl(midi_send_no_gvl, (void *) midi_send_params, NULL, NULL);
-        if(sent == Qfalse) {
-                printf ("nooooooo\n");
-        } else {
-                printf ("yeah!!\n");
-        }
 
-
-        return Qnil;
+        return sent;
 }
 
 
@@ -347,7 +297,7 @@ VALUE client_init(int argc, VALUE *argv, VALUE self)
         }
 
         rb_iv_set(self, "@name", name);
-
+        clientNode->rb_client_obj = self;
         return self;
 }
 

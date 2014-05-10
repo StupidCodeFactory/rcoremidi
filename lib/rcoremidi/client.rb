@@ -14,11 +14,6 @@ module RCoreMidi
 
     def start
       trap 'SIGINT', proc { puts "quiting"; exit(0) }
-
-      loop do
-        sleep 10
-      end
-
     end
 
   end

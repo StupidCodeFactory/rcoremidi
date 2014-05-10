@@ -23,8 +23,9 @@ source      = Device.all.last.entities.first.endpoints.detect { |e| e.is_a? Sour
 client.connect_to source
 
 loop do
-    puts "sendind"
-    client.send(destination, [90, 50, 100])
+    client.send(destination, [0x90, 0x34, 0x65])
+    sleep 1
+    client.send(destination, [0x80, 0x34, 0x00])
     sleep 1
 end
 

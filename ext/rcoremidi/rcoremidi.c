@@ -110,13 +110,10 @@ static VALUE boot_callback_event_thread(void * data) {
                 rb_thread_call_without_gvl(wait_for_callback_signal, &waiting, stop_waiting_for_callback_signal, &waiting);
                 if (waiting.callback)
                 {
-                        /* VALUE client = (VALUE)waiting.callback->data; */
-                        /* RCoremidiNode *clientNode = client_get_data(client); */
                         RCoremidiNode *clientNode = (RCoremidiNode *)waiting.callback->data;
 
                         pthread_mutex_lock(&waiting.callback->mutex);
-                        /* rb_funcall(client, on_tick_intern, 0); */
-                        /* rb_funcall(rb_mKernel, rb_intern("puts"), 1, rb_funcall(client, rb_intern("on_tick"), 0)); */
+                        rb_funcall(clientNode->rb_client_obj, on_tick_intern, 0);
                         printf ("TRANSPORT: %d\n", clientNode->transport->tick_count);
                         pthread_mutex_unlock(&waiting.callback->mutex);
                 }
