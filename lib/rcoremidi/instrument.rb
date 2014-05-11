@@ -7,6 +7,11 @@ module RCoreMidi
 
     def initialize(client)
       self.client = client
+      self.instruments = []
+    end
+
+    def instrument name, channel, &block
+      instruments << Instrument.new(name, channel).instance_eval(&block)
     end
 
     private
@@ -36,21 +41,19 @@ module RCoreMidi
   end
 
   class Instrument
-    attr_reader :channel
-    def initialize name, channels
+
+    def initialize(name, channels)
       self.name = name
-      self.track = []
+      self.notes = []
       self.channels = Array(channels)
     end
 
-    def add note, probabilities
-      track << Note.new(note).to_midi
+    def add(note, probabilities)
+      notes << Note.new(note)
     end
 
     private
-    attr_accessor :name, :track
-    attr_writer :channels
+    attr_accessor :name, :notes, :channels
   end
-
 
 end

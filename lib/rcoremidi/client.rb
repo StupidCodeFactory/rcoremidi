@@ -13,7 +13,17 @@ module RCoreMidi
     end
 
     def start
-      trap 'SIGINT', proc { puts "quiting"; exit(0) }
+      trap 'SIGINT', Proc.new {
+        dispose
+        puts "quiting"
+        exit(0)
+      }
+      @@core_midi_cb_thread.join
+    end
+
+    def live(&block)
+      @live = Live.new(self)
+      @live.instance_eval(&block)
     end
 
   end

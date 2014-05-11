@@ -4,9 +4,8 @@ require 'irb'
 
 require "bundler/setup"
 require 'byebug'
-Bundler.require :default
-ARGV.clear
-
+require 'ap'
+Bundler.setup :default
 
 require 'rcoremidi'
 
@@ -20,9 +19,9 @@ require 'rcoremidi'
 # puts "#{Process.pid} press any key to stat"
 # gets
 # destination = device.entities.first.endpoints.detect { |e| e.is_a? Destination }
-# source      = Device.all.last.entities.first.endpoints.detect { |e| e.is_a? Source }
 
-# client.connect_to source
+source      = RCoreMidi::Device.all.last.entities.first.endpoints.detect { |e| e.is_a? RCoreMidi::Source }
+
 
 # loop do
 #     client.send(destination, [0x90, 0x34, 0x65])
@@ -33,25 +32,19 @@ require 'rcoremidi'
 
 # RCoreMidi::ConnectionManager.devices[1]
 
-module Workspace
-  include RCoreMidi::DSL
+client = RCoreMidi::Client.new("Bob")
+client.connect_to source
 
-  @client = RCoreMidi::Client.new("Bob")
-
-  live(@client) do
-    byebug
-
-    instrument :drum, 1 do
-      add 'C3', [ 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0 ]
-      add 'D3', [ 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0 ]
-    end
-
-    puts self.inspect
+client.live do
+  # byebug
+  instrument :drum, 1 do
+    add 'C3', [ 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0 ]
+    add 'D3', [ 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0 ]
   end
-
+  pp self
 end
 
-
+client.start
 # c_index = Musicalism::Note::NOTES.index { |n| n.include? "C" }
 # notes = Musicalism::Note::NOTES[c_index..-1]
 # notes += Musicalism::Note::NOTES[0..(c_index-1)]
