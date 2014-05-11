@@ -99,14 +99,8 @@ static void notifyProc(const MIDINotification *notification, void *refCon)
 }
 
 
-VALUE midi_in_callback(void *data)
-{
-        callback_t *callback = (callback_t *)data;
-        return Qtrue;
-}
-
 static void MidiReadProc(const MIDIPacketList *pktlist, void *refCon, void *connRefCon) {
-        MIDIPacket *packet = (MIDIPacket *)pktlist->packet; // remove const (!)
+        MIDIPacket *packet = (MIDIPacket *)pktlist->packet;
         unsigned int j;
         int i;
 
@@ -119,17 +113,21 @@ static void MidiReadProc(const MIDIPacketList *pktlist, void *refCon, void *conn
 
                         switch(packet->data[i]) {
                         case kMIDIStart:
-                                transport->start_timestamp = AudioGetCurrentHostTime();
+                                /* static MIDITimeStamp timestamp = 0; */
+                                transport->current_timestamp = mach_absolute_time();
 
-                                printf("Starting at %llu\n, host clock Fz: %lf, minimu delta %d\n",
-                                       AudioGetCurrentHostTime(),
-                                       AudioGetHostClockFrequency(),
-                                       AudioGetHostClockMinimumTimeDelta());
+                                /* printf("Starting at %llu\n, host clock Fz: %lf, minimu delta %d\n", */
+                                /*        AudioGetCurrentHostTime(), */
+                                /*        AudioGetHostClockFrequency(), */
+                                /*        AudioGetHostClockMinimumTimeDelta()); */
                                 break;
                         case kMIDIStop:
                                 printf("Stoping Client...\n");
                                 break;
                         case kMIDITick:
+                                /* static MIDITimeStamp timestamp = 0; */
+                                /* clientNode->transport->current_timestamp - mach_absolute_time(); */
+
                                 transport->tick_count++;
 
                                 if((transport->tick_count % 64) == 0)
@@ -207,10 +205,7 @@ static void *midi_send_no_gvl(void *data)
         MIDIPacketList  *packet_list = malloc(params->data_size);
         MIDIPacket      *packet      = MIDIPacketListInit(packet_list);
         Byte * debug = params->data;
-        /* Byte d[3] = {0x90, 0x34, 0x65}; */
         /* printf ("debug - char: %s\n", (unsigned char *)debug); */
-        /* params->data */
-        /* params->data_size */
 
 
         packet = MIDIPacketListAdd(packet_list, 1024, packet, 0, params->data_size, params->data);

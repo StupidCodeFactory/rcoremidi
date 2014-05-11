@@ -4,4 +4,5 @@ require "rcoremidi/connection_manager"
 require "rcoremidi/entity"
 require "rcoremidi/client"
 require "rcoremidi/instrument"
+require 'rcoremidi/dsl'
 require "rcoremidi/gui/base"

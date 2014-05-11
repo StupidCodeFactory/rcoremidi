@@ -8,20 +8,18 @@ VALUE cClientAlloc(VALUE klass);
 VALUE start(VALUE self);
 VALUE stop(VALUE stop);
 VALUE client_alloc();
-VALUE rb_cOnTick();
-VALUE midi_in_callback(void *data);
-
 
 typedef struct RCoreMidiTransport
 {
-  UInt64 start_timestamp;
-  unsigned short state;
-  unsigned int tempo;
-  unsigned int tick_count;
-  unsigned int bar;
-  unsigned int quarter;
-  unsigned int eigth;
-  unsigned int sixteinth;
+        MIDITimeStamp  current_timestamp;
+        UInt64         delta;
+        unsigned short state;
+        unsigned int   tempo;
+        unsigned int   tick_count;
+        unsigned int   bar;
+        unsigned int   quarter;
+        unsigned int   eigth;
+        unsigned int   sixteinth;
 } RCoreMidiTransport;
 
 #endif

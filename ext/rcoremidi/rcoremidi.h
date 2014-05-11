@@ -4,6 +4,7 @@
 #include <Carbon/carbon.h>
 #include <CoreAudio/CoreAudio.h>
 #include <CoreMIDI/MIDIServices.h>
+#include <mach/mach_time.h>
 #include <pthread.h>
 #include <stdbool.h>
 #include "client.h"

@@ -2,50 +2,54 @@
 require 'irb'
 # require 'irb/rubinius'
 
-require "#{File.dirname(__FILE__) + '/../lib/rcoremidi.rb'}"
 require "bundler/setup"
 require 'byebug'
 Bundler.require :default
 ARGV.clear
 
-module RCoreMidi
 
 require 'rcoremidi'
-client = Client.new("Bob")
-device = Device.all.last
-puts device.name
-
-puts "#{Process.pid} press any key to stat"
-gets
-destination = device.entities.first.endpoints.detect { |e| e.is_a? Destination }
-source      = Device.all.last.entities.first.endpoints.detect { |e| e.is_a? Source }
-
-client.connect_to source
-
-loop do
-    client.send(destination, [0x90, 0x34, 0x65])
-    sleep 1
-    client.send(destination, [0x80, 0x34, 0x00])
-    sleep 1
-end
-
- # RCoreMidi::ConnectionManager.devices[1]
-
-include RCoreMidi::DSL
 
 
-# live client do
 
-  # instrument :drum, 1 do
-  #   add 'C3', [ 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0 ]
-  #   add 'D3', [ 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0 ]
-  # end
 
+
+# device = RCoreMidi::Device.all.last
+# puts device.name
+
+# puts "#{Process.pid} press any key to stat"
+# gets
+# destination = device.entities.first.endpoints.detect { |e| e.is_a? Destination }
+# source      = Device.all.last.entities.first.endpoints.detect { |e| e.is_a? Source }
+
+# client.connect_to source
+
+# loop do
+#     client.send(destination, [0x90, 0x34, 0x65])
+#     sleep 1
+#     client.send(destination, [0x80, 0x34, 0x00])
+#     sleep 1
 # end
 
+# RCoreMidi::ConnectionManager.devices[1]
 
+module Workspace
+  include RCoreMidi::DSL
 
+  @client = RCoreMidi::Client.new("Bob")
 
+  live(@client) do
+    byebug
+
+    instrument :drum, 1 do
+      add 'C3', [ 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0 ]
+      add 'D3', [ 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0 ]
+    end
+
+    puts self.inspect
+  end
+
+end
 
 
 # c_index = Musicalism::Note::NOTES.index { |n| n.include? "C" }
@@ -54,4 +58,3 @@ include RCoreMidi::DSL
 # puts client.inspect
 # client.start
 # IRB.start(__FILE__)
-end

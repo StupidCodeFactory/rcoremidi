@@ -1,21 +1,6 @@
 require 'musicalism'
 
 module RCoreMidi
-
-  module DSL
-
-    def live(client)
-      self.live = Live.new(client)
-    end
-
-    def instrument name, channel, &block
-      client.instruments << Instrument.new(name).instance_eval(&block)
-    end
-
-    private
-    attr_accessor :live
-  end
-
   class InvalidNotName < ArgumentError; end
 
   class Live

@@ -111,10 +111,9 @@ static VALUE boot_callback_event_thread(void * data) {
                 if (waiting.callback)
                 {
                         RCoremidiNode *clientNode = (RCoremidiNode *)waiting.callback->data;
-
                         pthread_mutex_lock(&waiting.callback->mutex);
                         rb_funcall(clientNode->rb_client_obj, on_tick_intern, 0);
-                        printf ("TRANSPORT: %d\n", clientNode->transport->tick_count);
+                        printf ("TRANSPORT: %d - PPQN DELTA: %lld\n", clientNode->transport->tick_count, timestamp);
                         pthread_mutex_unlock(&waiting.callback->mutex);
                 }
         }
@@ -182,7 +181,7 @@ Init_rcoremidi()
         rb_define_method(rb_cClient, "initialize", client_init, -1);
         rb_define_method(rb_cClient, "connect_to", connect_to, 1);
         rb_define_method(rb_cClient, "dispose", dispose_client, 0);
-        rb_define_method(rb_cClient, "on_tick", midi_in_callback, 0);
+        /* rb_define_method(rb_cClient, "on_tick", midi_in_callback, 0); */
         rb_define_method(rb_cClient, "send", send, 2);
         rb_define_attr(rb_cClient, "name", 1, 1);
         rb_define_attr(rb_cClient, "is_connected", 1, 1);
