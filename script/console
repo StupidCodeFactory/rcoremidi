@@ -13,41 +13,21 @@ require 'rcoremidi'
 
 
 
-# device = RCoreMidi::Device.all.last
-# puts device.name
-
-# puts "#{Process.pid} press any key to stat"
-# gets
-# destination = device.entities.first.endpoints.detect { |e| e.is_a? Destination }
+device = RCoreMidi::Device.all.last
+puts device.name
+destination = device.entities.first.endpoints.detect { |e| e.is_a? RCoreMidi::Destination }
 
 source      = RCoreMidi::Device.all.last.entities.first.endpoints.detect { |e| e.is_a? RCoreMidi::Source }
 
+client = RCoreMidi::Client.new("Bob", 180)
 
-# loop do
-#     client.send(destination, [0x90, 0x34, 0x65])
-#     sleep 1
-#     client.send(destination, [0x80, 0x34, 0x00])
-#     sleep 1
-# end
-
-# RCoreMidi::ConnectionManager.devices[1]
-
-client = RCoreMidi::Client.new("Bob")
 client.connect_to source
 
-client.live do
-  # byebug
-  instrument :drum, 1 do
-    add 'C3', [ 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0 ]
-    add 'D3', [ 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0 ]
-  end
-  pp self
+instruments_dir = File.join(File.dirname(__FILE__), 'instruments')
+client.live destination, instruments_dir do
+
+   # instrument 'drum', 0
+  instrument 'bass', 1
 end
 
 client.start
-# c_index = Musicalism::Note::NOTES.index { |n| n.include? "C" }
-# notes = Musicalism::Note::NOTES[c_index..-1]
-# notes += Musicalism::Note::NOTES[0..(c_index-1)]
-# puts client.inspect
-# client.start
-# IRB.start(__FILE__)

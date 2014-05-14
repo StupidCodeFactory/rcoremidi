@@ -1,4 +1,7 @@
 #include "rcoremidi.h"
+static ByteCount max_packet_list_size = 65536;
+static unsigned long mspm = 60000000;
+static ByteCount note_on_packet_size = 2;
 
 static void midi_node_free(void *ptr)
 {
@@ -129,9 +132,31 @@ static void MidiReadProc(const MIDIPacketList *pktlist, void *refCon, void *conn
                                 /* clientNode->transport->current_timestamp - mach_absolute_time(); */
 
                                 transport->tick_count++;
-
-                                if((transport->tick_count % 64) == 0)
+                                if(transport->tick_count == 1)
                                 {
+                                        clientNode->callback->data = (void *)clientNode;
+
+
+                                        pthread_mutex_lock(&g_callback_mutex);
+                                        g_callback_queue_push(clientNode->callback);
+                                        pthread_mutex_unlock(&g_callback_mutex);
+
+                                        pthread_cond_signal(&g_callback_cond);
+                                        transport->bar++;
+                                }
+
+
+                                if((transport->tick_count % 96) == 0)
+                                {
+                                        clientNode->callback->data = (void *)clientNode;
+
+
+                                        pthread_mutex_lock(&g_callback_mutex);
+                                        g_callback_queue_push(clientNode->callback);
+                                        pthread_mutex_unlock(&g_callback_mutex);
+
+                                        pthread_cond_signal(&g_callback_cond);
+
                                         transport->bar++;
                                 }
                                 // quarter
@@ -147,14 +172,6 @@ static void MidiReadProc(const MIDIPacketList *pktlist, void *refCon, void *conn
                                         transport->sixteinth++;
                                 }
 
-                                clientNode->callback->data = (void *)clientNode;
-
-
-                                pthread_mutex_lock(&g_callback_mutex);
-                                g_callback_queue_push(clientNode->callback);
-                                pthread_mutex_unlock(&g_callback_mutex);
-
-                                pthread_cond_signal(&g_callback_cond);
 
                                 break;
                         case kMIDISongPositionPointer:
@@ -230,7 +247,7 @@ VALUE send(VALUE self, VALUE destination, VALUE midi_stream)
         midi_send_params->data = midi_data;
 
         Byte *start = midi_send_params->data;
-        printf ("sending:");
+
         for (i = 0; i < midi_send_params->data_size; ++i)
         {
                 *midi_data = (Byte) NUM2UINT(rb_ary_entry(midi_stream, i));
@@ -238,7 +255,7 @@ VALUE send(VALUE self, VALUE destination, VALUE midi_stream)
                 /* printf ("char: %s\n", (unsigned char *)midi_send_params->data); */
                 midi_data++;
         }
-        printf ("\n");
+
         RCoremidiNode *clientNode;
         TypedData_Get_Struct(self, RCoremidiNode, &midi_node_data_t, clientNode);
 
@@ -254,19 +271,69 @@ VALUE send(VALUE self, VALUE destination, VALUE midi_stream)
         return sent;
 }
 
-
-
-VALUE client_init(int argc, VALUE *argv, VALUE self)
+static Byte *convert_to_bytes(Byte *tail, VALUE midi_bytes)
 {
-        VALUE name;
-        VALUE client_ref;
-        rb_scan_args(argc, argv, "1", &name);
+        if (rb_funcall(midi_bytes, empty_intern, 0) == Qtrue)
+        {
+                return tail;
+        }
+
+        *tail = NUM2UINT(rb_ary_shift(midi_bytes));
+        tail++;
+
+        return convert_to_bytes(tail, midi_bytes);
+
+}
+
+VALUE send_packets(VALUE self, VALUE destination, VALUE packets)
+{
+        int       number_of_packets, i;
+
+        VALUE     note, midi_payload;
+
+        ByteCount midi_payload_size;
+        Byte      *bytes, *tail;
+
+        RCoremidiNode   *clientNode;
+        MIDIEndpointRef *midi_destination;
+        MIDIPacketList  *packet_list;
+        MIDIPacket      *midi_packet;
+        MIDITimeStamp   timestamp;
+        number_of_packets = NUM2INT(rb_funcall(packets, length_intern, 0));
+
+        packet_list = malloc(65536);
+        midi_packet = MIDIPacketListInit(packet_list);
+        UInt64 t = mach_absolute_time();
+        for (i = 0; i < number_of_packets; ++i)
+        {
+
+                note              = rb_ary_entry(packets, i);
+                midi_payload      = rb_funcall(note, to_midi_bytes_intern, 0);
+                midi_payload_size = NUM2ULONG(rb_funcall(midi_payload, length_intern, 0));
+
+                bytes = tail = malloc(midi_payload_size);
+                convert_to_bytes(tail, midi_payload);
+                timestamp         = t + NUM2ULL(rb_funcall(note, rb_intern("at_offset"), 0));
+
+                midi_packet       = MIDIPacketListAdd(packet_list, max_packet_list_size, midi_packet, timestamp, midi_payload_size, bytes);
+                if (midi_packet == NULL) {
+                        rb_raise(rb_eRuntimeError, "WTF???");
+                }
+        }
+
+        TypedData_Get_Struct(self, RCoremidiNode, &midi_node_data_t, clientNode);
+        TypedData_Get_Struct(destination, MIDIObjectRef, &midi_object_data_t, midi_destination);
+
+        MIDISend(*clientNode->out, *midi_destination, packet_list);
+        return Qnil;
+}
 
 
+
+VALUE client_init(VALUE self, VALUE name, VALUE bpm)
+{
         RCoremidiNode *clientNode;
         TypedData_Get_Struct(self, RCoremidiNode, &midi_node_data_t, clientNode);
-
-        strncpy(clientNode->name, "name", strlen("name"));
 
         CFStringRef cName = CFStringCreateWithCString(NULL, RSTRING_PTR(name), kCFStringEncodingUTF8);
 
@@ -292,7 +359,15 @@ VALUE client_init(int argc, VALUE *argv, VALUE self)
         }
 
         rb_iv_set(self, "@name", name);
+        rb_iv_set(self, "@bpm",  bpm);
+
         clientNode->rb_client_obj = self;
+
+        float mpqn = mspm / FIX2UINT(bpm);
+        float mpt = mpqn/ (float) 24;
+        printf ("tick delta: %7f\n", mpt);
+        clientNode->transport->mpt = mpt;
+
         return self;
 }
 

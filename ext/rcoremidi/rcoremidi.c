@@ -21,6 +21,7 @@ ID lock_intern;
 ID length_intern;
 ID pack_intern;
 ID core_midi_cb_thread_intern;
+ID to_midi_bytes_intern;
 
 static ID on_tick_intern;
 
@@ -131,6 +132,7 @@ Init_rcoremidi()
         empty_intern               = rb_intern("empty?");
         length_intern              = rb_intern("length");
         core_midi_cb_thread_intern = rb_intern("@@core_midi_cb_thread");
+        to_midi_bytes_intern       = rb_intern("to_midi_bytes");
 
         rb_mRCOREMIDI = rb_define_module("RCoreMidi");
 
@@ -180,10 +182,11 @@ Init_rcoremidi()
          */
         rb_cClient =  rb_define_class_under(rb_mRCOREMIDI, "Client", rb_cObject);
         rb_define_alloc_func(rb_cClient, client_alloc);
-        rb_define_method(rb_cClient, "initialize", client_init, -1);
+        rb_define_method(rb_cClient, "initialize", client_init, 2);
         rb_define_method(rb_cClient, "connect_to", connect_to, 1);
         rb_define_method(rb_cClient, "dispose", dispose_client, 0);
         rb_define_method(rb_cClient, "send", send, 2);
+        rb_define_method(rb_cClient, "send_packets", send_packets, 2);
         rb_define_attr(rb_cClient, "name", 1, 1);
         rb_define_attr(rb_cClient, "is_connected", 1, 1);
 
