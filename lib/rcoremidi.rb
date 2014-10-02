@@ -1,10 +1,13 @@
 require 'securerandom'
 require 'rcoremidi.bundle'
 require 'active_support/core_ext'
-require "rcoremidi/connection_manager"
-require "rcoremidi/entity"
-require "rcoremidi/client"
+require 'rcoremidi/connection_manager'
+require 'rcoremidi/entity'
+require 'rcoremidi/client'
+require 'rcoremidi/generator'
 require 'rcoremidi/note_factory'
+require 'rcoremidi/live'
+require 'rcoremidi/note'
 require "rcoremidi/instrument"
 require 'rcoremidi/dsl'
 require "rcoremidi/gui/base"

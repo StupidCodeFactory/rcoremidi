@@ -15,30 +15,29 @@ module RCoreMidi
           its(:driver)       { should eq('com.apple.AppleMIDIIACDriver') }
           its(:manufacturer) { should eq('Apple Inc.') }
           its(:uid)          { should eq(191445378) }
-          its(:entities)     { should have(1).item }
-        end
 
-        describe 'when getting an entity' do
-          let(:uid) { 411021342 }
+          describe 'with entities' do
+            pending 'populates the entites' do
 
-          its(:class)        { should eq(RCoreMidi::Entity) }
-          its(:uid)          { should eq(411021342) }
-          its(:name)         { should eq('Bus 1') }
-          its(:endpoints)    { puts subject.inspect; should have(2).items }
+              expect(subject.entities.count).to eq(1)
+            end
+          end
+
         end
 
         describe 'when getting a source' do
-          let(:uid) { 646417791 }
+          let(:uid) { -1061455043 }
 
           its(:class)        { should eq(RCoreMidi::Source) }
-          its(:uid)          { should eq(646417791) }
+          its(:uid)          { should eq(-1061455043) }
         end
 
         describe 'when getting a destination' do
-          let(:uid) { 1912813983 }
+
+          let(:uid) { 1362942403 }
 
           its(:class)        { should eq(RCoreMidi::Destination) }
-          its(:uid)          { should eq(1912813983) }
+          its(:uid)          { should eq(1362942403) }
         end
       end
     end

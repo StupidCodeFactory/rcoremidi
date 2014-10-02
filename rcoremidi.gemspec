@@ -22,11 +22,8 @@ the osx CoreMidi Framework}
   s.test_files = Dir['spec/**/*.rb']
 
   s.add_dependency 'activesupport'
-  s.add_development_dependency 'guard-rake'
-  s.add_development_dependency 'guard-rspec'
   s.add_development_dependency 'rdoc'
   s.add_development_dependency 'rspec'
+  s.add_development_dependency 'rspec-its'
   s.add_development_dependency 'rake-compiler'
-  s.add_development_dependency 'byebug'
-  s.add_development_dependency 'terminal-notifier-guard'
 end

@@ -5,11 +5,11 @@ module RCoreMidi
     describe Client do
       let(:destination) { Device.all.last.entities.first.endpoints.detect { |e| e.is_a? Destination } }
       let(:source)      { Device.all.last.entities.first.endpoints.detect { |e| e.is_a? Source } }
-      let(:client)      { Client.new("ruby_client") }
+      let(:client)      { Client.new("ruby_client", 120) }
 
       describe '#connect' do
         it 'can connect to a source' do
-          expect(client.connect_to(source)).to be_true
+          expect(client.connect_to(source)).to be true
         end
 
       end
@@ -17,10 +17,9 @@ module RCoreMidi
         before do
           client.connect_to(source)
         end
+
         it 'sends midi packet' do
-          10.times do
-            client.send(destination, [34, 127])
-          end
+          expect { 10.times { client.send(destination, [34, 127]) } }.to_not raise_error
         end
       end
 

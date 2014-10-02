@@ -3,13 +3,21 @@ require 'spec_helper'
 module RCoreMidi
 
   describe Note do
-    let(:note) { Note.new('D4', 34) }
+    let(:channel) { 1 }
+    let(:note)    { Note.new('D4', 34, 0, 123, channel) }
 
-    describe '#to_midi' do
-      it 'returns the midi note code and velocity' do
-        expect(note.to_midi).to eq([38, 34])
+    describe '#on' do
+      it 'returns the channel, midi note, ' do
+        expect(note.on).to eq([channel | Note::NOTE_ON, 38, 34])
       end
     end
+
+    describe '#off' do
+      it 'returns the midi note code and velocity' do
+        expect(note.off).to eq([channel | Note::NOTE_OFF, 38, 34])
+      end
+    end
+
   end
 
   describe Instrument do

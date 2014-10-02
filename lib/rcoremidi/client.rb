@@ -31,9 +31,10 @@ module RCoreMidi
       notes_to_send = []
       @live.instruments_by_channel.each do |channel, instruments|
         instruments.each do |instrument|
-          notes_to_send <<  instrument.generate(NoteFactory.new(mpt)).flatten
+          notes_to_send +=  instrument.generate(NoteFactory.new(mpt))
         end
       end
+
       notes_to_send.flatten!
       send_packets(@destination, notes_to_send)
     end
