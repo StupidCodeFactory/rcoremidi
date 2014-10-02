@@ -287,7 +287,7 @@ static Byte *convert_to_bytes(Byte *tail, VALUE midi_bytes)
 
 VALUE send_packets(VALUE self, VALUE destination, VALUE packets)
 {
-        int       number_of_packets, i;
+        int       packets_count, notes_count, i;
 
         VALUE     note, midi_payload;
 
@@ -299,26 +299,42 @@ VALUE send_packets(VALUE self, VALUE destination, VALUE packets)
         MIDIPacketList  *packet_list;
         MIDIPacket      *midi_packet;
         MIDITimeStamp   timestamp;
-        number_of_packets = NUM2INT(rb_funcall(packets, length_intern, 0));
+
+        notes_count   = NUM2INT(rb_funcall(packets, length_intern, 0));
+        packets_count = 2 * notes_count;
 
         packet_list = malloc(65536);
         midi_packet = MIDIPacketListInit(packet_list);
         UInt64 t = mach_absolute_time();
-        for (i = 0; i < number_of_packets; ++i)
+        for (i = 0; i < notes_count; ++i)
         {
 
                 note              = rb_ary_entry(packets, i);
-                midi_payload      = rb_funcall(note, to_midi_bytes_intern, 0);
+                midi_payload      = rb_funcall(note, on_intern, 0);
                 midi_payload_size = NUM2ULONG(rb_funcall(midi_payload, length_intern, 0));
 
                 bytes = tail = malloc(midi_payload_size);
                 convert_to_bytes(tail, midi_payload);
-                timestamp         = t + NUM2ULL(rb_funcall(note, rb_intern("at_offset"), 0));
+                timestamp         = t + NUM2ULL(rb_funcall(note, on_timestamp_intern, 0));
 
                 midi_packet       = MIDIPacketListAdd(packet_list, max_packet_list_size, midi_packet, timestamp, midi_payload_size, bytes);
+
                 if (midi_packet == NULL) {
-                        rb_raise(rb_eRuntimeError, "WTF???");
+                        rb_raise(rb_eRuntimeError, "no more space in the packet list");
                 }
+
+                midi_payload      = rb_funcall(note, off_intern, 0);
+                midi_payload_size = NUM2ULONG(rb_funcall(midi_payload, length_intern, 0));
+
+                tail = bytes;
+                convert_to_bytes(tail, midi_payload);
+                timestamp         = t + NUM2ULL(rb_funcall(note, off_timestamp_intern, 0));
+                midi_packet       = MIDIPacketListAdd(packet_list, max_packet_list_size, midi_packet, timestamp, midi_payload_size, bytes);
+
+                if (midi_packet == NULL) {
+                        rb_raise(rb_eRuntimeError, "no more space in the packet list");
+                }
+
         }
 
         TypedData_Get_Struct(self, RCoremidiNode, &midi_node_data_t, clientNode);

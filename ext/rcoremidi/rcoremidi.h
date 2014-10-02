@@ -26,7 +26,10 @@ extern ID empty_intern;
 extern ID lock_intern;
 extern ID length_intern;
 extern ID pack_intern;
-extern ID to_midi_bytes_intern;
+extern ID on_intern;
+extern ID off_intern;
+extern ID on_timestamp_intern;
+extern ID off_timestamp_intern;
 
 extern const rb_data_type_t midi_endpoint_data_t;
 extern const rb_data_type_t midi_object_data_t;

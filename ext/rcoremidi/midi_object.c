@@ -208,10 +208,20 @@ find_by_unique_id(VALUE klass, VALUE uid)
         MIDIObjectRef  midi_object;
         MIDIObjectType midi_object_type;
 
-        MIDIObjectFindByUniqueID((MIDIUniqueID)FIX2INT(uid), &midi_object, &midi_object_type);
 
 
+        OSStatus error;
+        error = MIDIObjectFindByUniqueID((MIDIUniqueID)FIX2INT(uid), &midi_object, &midi_object_type);
+
+        /* CFPropertyListRef midi_properties; */
+        /* MIDIObjectGetProperties(midi_object, &midi_properties, true); */
         /* CFShow(midi_properties); */
+        /* printf("OBJECT TYPE: %d\n", midi_object_type); */
+
+        if (error == kMIDIObjectNotFound) {
+                rb_raise(rb_eArgError, "MIDI Object not found %d\n", FIX2INT(uid));
+        }
+
 
         if (midi_object_type == kMIDIObjectType_Device) {
                 VALUE device = create_device();
@@ -234,8 +244,7 @@ find_by_unique_id(VALUE klass, VALUE uid)
                 assign_endpoint_properties(destination, &midi_object);
                 return destination;
         } else {
-                /* raise an exception of unhandled object type  */
-                printf ("unkonwn type\n");
+                rb_raise(rb_eArgError, "MIDI Object not found %d\n", FIX2INT(uid));
                 return Qnil;
         }
 }

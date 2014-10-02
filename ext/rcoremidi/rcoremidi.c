@@ -21,7 +21,10 @@ ID lock_intern;
 ID length_intern;
 ID pack_intern;
 ID core_midi_cb_thread_intern;
-ID to_midi_bytes_intern;
+ID on_intern;
+ID off_intern;
+ID on_timestamp_intern;
+ID off_timestamp_intern;
 
 static ID on_tick_intern;
 
@@ -132,7 +135,10 @@ Init_rcoremidi()
         empty_intern               = rb_intern("empty?");
         length_intern              = rb_intern("length");
         core_midi_cb_thread_intern = rb_intern("@@core_midi_cb_thread");
-        to_midi_bytes_intern       = rb_intern("to_midi_bytes");
+        on_intern                  = rb_intern("on");
+        off_intern                 = rb_intern("off");
+        on_timestamp_intern        = rb_intern("on_timestamp");
+        off_timestamp_intern       = rb_intern("off_timestamp");
 
         rb_mRCOREMIDI = rb_define_module("RCoreMidi");
 
