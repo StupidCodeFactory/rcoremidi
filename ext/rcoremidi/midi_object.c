@@ -1,5 +1,5 @@
 #include "rcoremidi.h"
-
+#include <AssertMacros.h>
 
 
 static void

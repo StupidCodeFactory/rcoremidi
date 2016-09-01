@@ -7,7 +7,9 @@ module RCoreMidi
     end
 
     def on_tick
-      generate_beats
+      to_send = @live.generate_beats(duration_calculator).flatten.compact
+      ap to_send
+      send_packets(@destination, to_send)
     end
 
     def start
@@ -17,30 +19,20 @@ module RCoreMidi
         puts "quiting"
         exit(0)
       }
-      # generate_beats
       sleep
     end
 
     def live(destination, instruments_dir, &block)
       @destination = destination
-      @live = Live.new(self, instruments_dir)
+      @live = Live.new(instruments_dir)
       @live.instance_eval(&block)
     end
 
-    def generate_beats
-      notes_to_send = []
-      @live.instruments_by_channel.each do |channel, instruments|
-        instruments.each do |instrument|
-          notes_to_send +=  instrument.generate(NoteFactory.new(mpt))
-        end
-      end
+    private
 
-      notes_to_send.flatten!
-      send_packets(@destination, notes_to_send)
+    def duration_calculator
+      @duration_calculator ||= DurationCalculator.new(@bpm)
     end
 
-    def mpt
-      @mpt ||= (60000000000 / @bpm.to_f) / 24.0
-    end
   end
 end

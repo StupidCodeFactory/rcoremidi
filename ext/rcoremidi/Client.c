@@ -103,6 +103,8 @@ static void notifyProc(const MIDINotification *notification, void *refCon)
 
 
 static void MidiReadProc(const MIDIPacketList *pktlist, void *refCon, void *connRefCon) {
+
+        pthread_mutex_lock(&g_callback_mutex);
         MIDIPacket *packet = (MIDIPacket *)pktlist->packet;
         unsigned int j;
         int i;
@@ -118,43 +120,22 @@ static void MidiReadProc(const MIDIPacketList *pktlist, void *refCon, void *conn
                         case kMIDIStart:
                                 /* static MIDITimeStamp timestamp = 0; */
                                 transport->current_timestamp = mach_absolute_time();
+                                clientNode->callback->data = (void *)clientNode;
 
-                                /* printf("Starting at %llu\n, host clock Fz: %lf, minimu delta %d\n", */
-                                /*        AudioGetCurrentHostTime(), */
-                                /*        AudioGetHostClockFrequency(), */
-                                /*        AudioGetHostClockMinimumTimeDelta()); */
+
+                                g_callback_queue_push(clientNode->callback);
+
                                 break;
                         case kMIDIStop:
                                 printf("Stoping Client...\n");
                                 break;
                         case kMIDITick:
-                                /* static MIDITimeStamp timestamp = 0; */
-                                /* clientNode->transport->current_timestamp - mach_absolute_time(); */
-
                                 transport->tick_count++;
-                                if(transport->tick_count == 1)
-                                {
+
+                                if ((transport->tick_count % 96) == 0) {
                                         clientNode->callback->data = (void *)clientNode;
 
-
-                                        pthread_mutex_lock(&g_callback_mutex);
                                         g_callback_queue_push(clientNode->callback);
-                                        pthread_mutex_unlock(&g_callback_mutex);
-
-                                        pthread_cond_signal(&g_callback_cond);
-                                        transport->bar++;
-                                }
-
-
-                                if((transport->tick_count % 96) == 0)
-                                {
-                                        clientNode->callback->data = (void *)clientNode;
-
-
-                                        pthread_mutex_lock(&g_callback_mutex);
-                                        g_callback_queue_push(clientNode->callback);
-                                        pthread_mutex_unlock(&g_callback_mutex);
-
                                         pthread_cond_signal(&g_callback_cond);
 
                                         transport->bar++;
@@ -185,14 +166,14 @@ static void MidiReadProc(const MIDIPacketList *pktlist, void *refCon, void *conn
                                 packet->data[i] = (packet->data[i] & 0xF0) | 0;
                         }
 
-                        /* printf("status byte %X data byte 1: %X data byte 2: %X\n",
-                           packet->data[i], packet->data[i+1], packet->data[i+2]); */
+                        /* printf("status byte %X data byte 1: %X data byte 2: %X\n", packet->data[i], packet->data[i+1], packet->data[i+2]); */
 
                 }
 
                 packet = MIDIPacketNext(packet);
         }
-
+        pthread_mutex_unlock(&g_callback_mutex);
+        pthread_cond_signal(&g_callback_cond);
 }
 
 VALUE connect_to(VALUE self, VALUE source)
@@ -315,8 +296,7 @@ VALUE send_packets(VALUE self, VALUE destination, VALUE packets)
 
                 bytes = tail = malloc(midi_payload_size);
                 convert_to_bytes(tail, midi_payload);
-                timestamp         = t + NUM2ULL(rb_funcall(note, on_timestamp_intern, 0));
-
+                timestamp         = t + AudioConvertNanosToHostTime(NUM2ULL(rb_funcall(note, on_timestamp_intern, 0)));
                 midi_packet       = MIDIPacketListAdd(packet_list, max_packet_list_size, midi_packet, timestamp, midi_payload_size, bytes);
 
                 if (midi_packet == NULL) {

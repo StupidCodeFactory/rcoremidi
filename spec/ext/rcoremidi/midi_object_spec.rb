@@ -3,7 +3,7 @@ require 'spec_helper'
 module RCoreMidi
   describe 'CoreMIDI driver' do
     subject(:midi_device) { MIDIObject.find_by_unique_id(uid) }
-
+    # before { byebug; true}
     describe MIDIObject do
       describe '.find_by_unique_id' do
 

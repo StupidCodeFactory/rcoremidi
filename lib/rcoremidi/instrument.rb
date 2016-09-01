@@ -4,33 +4,31 @@ module RCoreMidi
   class InvalidNotName < ArgumentError; end
 
   class Instrument
-    attr_reader :notes
+    attr_reader :track, :channel
 
     def initialize(name, channel, file)
       self.name    = name
-      self.notes   = {}
+      self.track   = {}
       self.channel = channel
       self.file    = file
     end
 
     def play(note, probabilities, generator = nil)
-      notes[note] = Generator.new(probabilities, generator)
+      track[note] = probabilities
       self
     end
 
-    def generate(factory)
+    def reload
       file.rewind
       instance_eval(file.read)
-      notes.inject([]) do |acc, note_and_generator|
-        note, generator = note_and_generator
-        acc += factory.generate(note, generator, channel)
-        acc
-      end
+      self
     end
 
     private
     attr_accessor :name, :channel, :file
-    attr_writer :notes
+    attr_writer :track
+
+
   end
 
 end

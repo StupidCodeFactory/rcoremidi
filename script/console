@@ -13,22 +13,24 @@ require 'rcoremidi'
 
 devices = RCoreMidi::Device.all
 
-device = RCoreMidi::Device.all.last
+device = RCoreMidi::Device.all[2]
 puts device.name
-destination = device.entities.first.endpoints.detect { |e| e.is_a? RCoreMidi::Destination }
+ap devices
+entity = device.entities.first
 
-source      = RCoreMidi::Device.all.last.entities.first.endpoints.detect { |e| e.is_a? RCoreMidi::Source }
+destination = entity.endpoints.detect { |e| e.is_a? RCoreMidi::Destination }
 
-client = RCoreMidi::Client.new("Bob", 120)
+source      = entity.endpoints.detect { |e| e.is_a? RCoreMidi::Source }
 
-# client.connect_to source
+client = RCoreMidi::Client.new("Bob", 180)
+
 client.connect_to source
 
 instruments_dir = File.join(File.dirname(__FILE__), 'instruments')
 
 client.live destination, instruments_dir do
   instrument 'drum', 0
-  instrument 'bass', 1
+  # instrument 'bass', 1
 end
 
 client.start
