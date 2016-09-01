@@ -47,21 +47,21 @@ void no_err(const OSStatus status, const char *error_message)
 
 void midi_endpoint_free(void *ptr)
 {
-    MIDIEndpointRef *tmp = ptr;
-    if(tmp) {
-        free(tmp);
-    }
+        MIDIEndpointRef *tmp = ptr;
+        if(tmp) {
+                free(tmp);
+        }
 }
 
 size_t midi_endpoint_memsize(const void *ptr)
 {
-    return ptr ? sizeof(MIDIEndpointRef) : 0;
+        return ptr ? sizeof(MIDIEndpointRef) : 0;
 }
 
 
 const rb_data_type_t midi_endpoint_data_t = {
-    "midi_enpoint",
-    0, midi_endpoint_free, midi_endpoint_memsize
+        "midi_enpoint",
+        0, midi_endpoint_free, midi_endpoint_memsize
 };
 
 
@@ -118,7 +118,7 @@ static VALUE boot_callback_event_thread(void * data) {
                         RCoremidiNode *clientNode = (RCoremidiNode *)waiting.callback->data;
                         pthread_mutex_lock(&waiting.callback->mutex);
                         rb_funcall(clientNode->rb_client_obj, on_tick_intern, 0);
-                        printf ("TRANSPORT: %d \n", clientNode->transport->tick_count);
+                        /* printf ("TRANSPORT: %d \n", clientNode->transport->tick_count); */
                         pthread_mutex_unlock(&waiting.callback->mutex);
                 }
         }
@@ -188,7 +188,7 @@ Init_rcoremidi()
          */
         rb_cClient =  rb_define_class_under(rb_mRCOREMIDI, "Client", rb_cObject);
         rb_define_alloc_func(rb_cClient, client_alloc);
-        rb_define_method(rb_cClient, "initialize", client_init, 2);
+        rb_define_method(rb_cClient, "initialize", client_init, 1);
         rb_define_method(rb_cClient, "connect_to", connect_to, 1);
         rb_define_method(rb_cClient, "dispose", dispose_client, 0);
         rb_define_method(rb_cClient, "send", send, 2);
@@ -196,7 +196,7 @@ Init_rcoremidi()
         rb_define_attr(rb_cClient, "name", 1, 1);
         rb_define_attr(rb_cClient, "is_connected", 1, 1);
 
-         cb_thread = rb_thread_create(boot_callback_event_thread, NULL);
-         rb_funcall(cb_thread, rb_intern("abort_on_exception="), 1, Qtrue);
-         rb_cvar_set(rb_cClient, core_midi_cb_thread_intern, cb_thread);
+        cb_thread = rb_thread_create(boot_callback_event_thread, NULL);
+        rb_funcall(cb_thread, rb_intern("abort_on_exception="), 1, Qtrue);
+        rb_cvar_set(rb_cClient, core_midi_cb_thread_intern, cb_thread);
 }

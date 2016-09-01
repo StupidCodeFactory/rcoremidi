@@ -22,13 +22,13 @@ destination = entity.endpoints.detect { |e| e.is_a? RCoreMidi::Destination }
 
 source      = entity.endpoints.detect { |e| e.is_a? RCoreMidi::Source }
 
-client = RCoreMidi::Client.new("Bob", 180)
+client = RCoreMidi::Client.new("Bob")
 
 client.connect_to source
 
 instruments_dir = File.join(File.dirname(__FILE__), 'instruments')
 
-client.live destination, instruments_dir do
+client.live destination, 180, instruments_dir do
   instrument 'drum', 0
   # instrument 'bass', 1
 end

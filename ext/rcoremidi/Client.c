@@ -326,7 +326,7 @@ VALUE send_packets(VALUE self, VALUE destination, VALUE packets)
 
 
 
-VALUE client_init(VALUE self, VALUE name, VALUE bpm)
+VALUE client_init(VALUE self, VALUE name)
 {
         RCoremidiNode *clientNode;
         TypedData_Get_Struct(self, RCoremidiNode, &midi_node_data_t, clientNode);
@@ -355,14 +355,9 @@ VALUE client_init(VALUE self, VALUE name, VALUE bpm)
         }
 
         rb_iv_set(self, "@name", name);
-        rb_iv_set(self, "@bpm",  bpm);
+
 
         clientNode->rb_client_obj = self;
-
-        float mpqn = mspm / FIX2UINT(bpm);
-        float mpt = mpqn/ (float) 24;
-        printf ("tick delta: %7f\n", mpt);
-        clientNode->transport->mpt = mpt;
 
         return self;
 }

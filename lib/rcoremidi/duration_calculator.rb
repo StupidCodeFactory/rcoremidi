@@ -8,7 +8,6 @@ module RCoreMidi
       compute_ppqn_delta_time
     end
 
-
     # quarter note    = 24  (in logic pro)
     # eigthth note    = 480 ticks
     # seixteenth note = 240 ticks
@@ -17,7 +16,6 @@ module RCoreMidi
       # our current resolution is an eigthth note
       # 48 ticks is our current resolution
       on = (mpt * 6 * note_index).round
-      ap [mpt, on, note_index]
       [on, (on + default_note_off_offset).round]
     end
 

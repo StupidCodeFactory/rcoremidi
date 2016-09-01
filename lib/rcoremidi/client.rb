@@ -7,7 +7,7 @@ module RCoreMidi
     end
 
     def on_tick
-      to_send = @live.generate_beats(duration_calculator).flatten.compact
+      to_send = @live.generate_beats.flatten.compact
       ap to_send
       send_packets(@destination, to_send)
     end
@@ -22,9 +22,9 @@ module RCoreMidi
       sleep
     end
 
-    def live(destination, instruments_dir, &block)
+    def live(destination, bpm, instruments_dir, &block)
       @destination = destination
-      @live = Live.new(instruments_dir)
+      @live = Live.new(bpm, instruments_dir)
       @live.instance_eval(&block)
     end
 
