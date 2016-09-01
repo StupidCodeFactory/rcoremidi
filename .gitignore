@@ -4,3 +4,4 @@ ext/rcormidi/Makefile
 tmp*
 .emacs*
 TAGS
+.byebug_history
