@@ -9,15 +9,15 @@ module RCoreMidi
       self.instruments     = []
     end
 
-    def instrument name, channel
+    def load_instrument name, channel
       puts "Loading instrument: #{name} on channel: #{channel}"
       file = File.open(File.join(instruments_dir, "#{name}.rb"))
-      instruments  << Instrument.new(name, channel, file)
+      instruments << Instrument.new(name, channel, file)
     end
 
-    def generate_beats
+    def generate_beats(bar)
       instruments.flat_map do |instrument|
-        instrument.generate_tracks(duration_calculator)
+        instrument.generate_tracks(bar, duration_calculator)
       end
     end
 

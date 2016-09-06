@@ -29,7 +29,9 @@ client.connect_to source
 instruments_dir = File.join(File.dirname(__FILE__), 'instruments')
 
 client.live destination, 180, instruments_dir do
-  instrument 'drum', 0
+
+  load_instrument 'drum', 0
+
   # instrument 'bass', 1
 end
 

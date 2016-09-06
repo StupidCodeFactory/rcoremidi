@@ -64,7 +64,7 @@ const rb_data_type_t midi_endpoint_data_t = {
         0, midi_endpoint_free, midi_endpoint_memsize
 };
 
-
+/* http://www.burgestrand.se//articles/asynchronous-callbacks-in-ruby-c-extensions/ */
 void g_callback_queue_push(callback_t *callback)
 {
         callback->next   = g_callback_queue;
@@ -117,7 +117,12 @@ static VALUE boot_callback_event_thread(void * data) {
                 {
                         RCoremidiNode *clientNode = (RCoremidiNode *)waiting.callback->data;
                         pthread_mutex_lock(&waiting.callback->mutex);
-                        rb_funcall(clientNode->rb_client_obj, on_tick_intern, 0);
+                        rb_funcall(
+                                clientNode->rb_client_obj,
+                                on_tick_intern,
+                                1,
+                                UINT2NUM(clientNode->transport->bar)
+                                );
                         /* printf ("TRANSPORT: %d \n", clientNode->transport->tick_count); */
                         pthread_mutex_unlock(&waiting.callback->mutex);
                 }

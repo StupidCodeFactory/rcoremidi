@@ -6,9 +6,8 @@ module RCoreMidi
       self
     end
 
-    def on_tick
+    def on_tick(bar)
       to_send = @live.generate_beats.flatten.compact
-      ap to_send
       send_packets(@destination, to_send)
     end
 

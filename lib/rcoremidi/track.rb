@@ -1,7 +1,7 @@
 module RCoreMidi
 
   class Track
-    def initialize(pitch, probabilities, probability_generator)
+    def initialize(pitch, probabilities, probability_generator, mutator = nil)
       self.pitch         = pitch
       self.probabilities = probabilities
       self.probabiltiy_generator = probability_generator
