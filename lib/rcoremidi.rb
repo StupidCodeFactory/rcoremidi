@@ -1,6 +1,7 @@
 require 'securerandom'
 require 'rcoremidi.bundle'
 require 'rcoremidi/connection_manager'
+require 'rcoremidi/clip'
 require 'rcoremidi/track'
 require 'rcoremidi/entity'
 require 'rcoremidi/client'
