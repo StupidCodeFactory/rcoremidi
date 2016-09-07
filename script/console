@@ -30,7 +30,7 @@ instruments_dir = File.join(File.dirname(__FILE__), 'instruments')
 
 client.live destination, 180, instruments_dir do
 
-  load_instrument 'drum', 0
+  load_instrument 'drum_2', 0
 
   # instrument 'bass', 1
 end

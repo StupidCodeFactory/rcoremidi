@@ -2,19 +2,24 @@ module RCoreMidi
 
   class Clip
 
-    @clips = {}
+    include RCoreMidi::Registrable
 
-
-    class << self
-      def [](clip_name)
-        @clips[clip_name]
-      end
-
-      def register(name)
-        @clips[name] = new
-      end
+    def initialize(name, &block)
+      self.name      = name
+      self.notes     = []
+      self.generator = block
     end
 
+    def call
+      instance_eval(&generator)
+    end
+
+    def note(pitch, probabilities, probability_generator: nil, mutator: nil)
+      notes << RythmSequence.new(pitch, probabilities, ProbabilityGenerator.new(&probability_generator), mutator)
+    end
+
+    private
+    attr_accessor :notes, :generator, :name
   end
 
 end

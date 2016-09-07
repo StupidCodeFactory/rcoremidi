@@ -5,16 +5,13 @@ module RCoreMidi
 
   class Instrument
 
-    def initialize(name, channel, file)
+    include RCoreMidi::Registrable
+
+    def initialize(name, channel, &block)
       self.name    = name
       self.channel = channel
-      self.file    = file
     end
 
-    def define_track(name, pitch, probability_generator: nil, mutator: nil)
-      puts "Loading patterns #{name} for #{pitch}"
-      midi_tracks[name] = Track.new(pitch, probabilities, ProbabilityGenerator.new(&probability_generator), mutator)
-    end
 
     def generate_tracks(bar, duration_calculator)
       reload.tracks.map do |track|
@@ -22,23 +19,16 @@ module RCoreMidi
       end.reduce(:+)
     end
 
-    def reload
-      file.rewind
-      self.midi_tracks = {}
-      instance_eval(file.read)
-      self
-    end
-
-    def tracks
-      @tracks ||= []
+    def play(bar, clip)
+      track[bar] = clip
     end
 
     private
     attr_accessor :name, :channel, :file
     attr_writer :tracks
 
-    def midi_tracks
-      @midi_tracks ||= {}
+    def tracks
+      @tracks ||= {}
     end
   end
 
