@@ -1,3 +1,5 @@
+require 'musicalism'
+
 module RCoreMidi
   class Note
     attr_accessor :note, :velocity, :channel, :status_byte, :on_timestamp, :off_timestamp
@@ -23,6 +25,9 @@ module RCoreMidi
       [channel | NOTE_OFF, note.to_midi, 0]
     end
 
+    def ==(other)
+      note == note && velocity == other.velocity
+    end
     private
     attr_writer :note, :velocity, :at_offset, :status_byte
 

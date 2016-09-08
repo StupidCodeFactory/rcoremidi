@@ -1,42 +1,45 @@
-require 'musicalism'
-
 module RCoreMidi
   class InvalidNotName < ArgumentError; end
 
   class Instrument
 
-    def initialize(name, channel, file)
+    include RCoreMidi::Registrable
+
+    def initialize(name, channel, &block)
       self.name    = name
       self.channel = channel
-      self.file    = file
+      instance_eval(&block)
     end
 
-    def play(pitch, probabilities, probability_generator: nil)
-      puts "Loading track for #{pitch}"
-      self.tracks << Track.new(pitch, probabilities, ProbabilityGenerator.new(&probability_generator))
-      self
+    def generate_bar(bar, duration_calculator)
+      track.generate(bar, duration_calculator)
     end
 
-    def generate_tracks(duration_calculator)
-      reload.tracks.map do |track|
-        track.generate(duration_calculator)
-      end.reduce(:+)
-    end
+    def play(bar, clip_name, enable_probability = false)
+      if bar.is_a? Range
+        bar.each do |bar_index|
+          track.play(bar_index, clip(clip_name), enable_probability)
+        end
+        track.reset_at = bar.max
+      else
+        track.play(bar, clip(clip_name), enable_probability)
+      end
 
-    def reload
-      file.rewind
-      self.tracks = []
-      instance_eval(file.read)
-      self
-    end
-
-    def tracks
-      @tracks ||= []
     end
 
     private
     attr_accessor :name, :channel, :file
     attr_writer :tracks
+
+    def track
+      @track ||= Track.new
+    end
+
+    def clip(name)
+      raise ArgumentError.new("Clip #{name} not found.") unless c = Clip[name]
+      c
+    end
+
   end
 
 end

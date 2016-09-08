@@ -9,28 +9,14 @@ Bundler.setup :default
 
 require 'rcoremidi'
 
-
-
-devices = RCoreMidi::Device.all
-
 device = RCoreMidi::Device.all[2]
-puts device.name
-ap devices
 entity = device.entities.first
 
 destination = entity.endpoints.detect { |e| e.is_a? RCoreMidi::Destination }
-
 source      = entity.endpoints.detect { |e| e.is_a? RCoreMidi::Source }
 
 client = RCoreMidi::Client.new("Bob")
 
-client.connect_to source
-
-instruments_dir = File.join(File.dirname(__FILE__), 'instruments')
-
-client.live destination, 180, instruments_dir do
-  instrument 'drum', 0
-  # instrument 'bass', 1
-end
+client.live source, destination, 180, 'script/clips', 'script/instruments'
 
 client.start

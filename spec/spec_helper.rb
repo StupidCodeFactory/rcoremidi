@@ -11,6 +11,8 @@ require 'rcoremidi'
 # loaded once.
 #
 # See http://rubydoc.info/gems/rspec-core/RSpec/Core/Configuration
+Dir['spec/support/**/*.rb'].each { |file| load file }
+
 RSpec.configure do |config|
   config.run_all_when_everything_filtered = true
   config.filter_run :focus

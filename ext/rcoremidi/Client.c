@@ -41,7 +41,7 @@ RCoremidiNode * client_get_data(VALUE self) {
 
 static RCoreMidiTransport * reset_transport(RCoreMidiTransport * transport) {
         transport->tick_count = 0;
-        transport->bar        = 0;
+        transport->bar        = 1;
         transport->quarter    = 0;
         transport->eigth      = 0;
         transport->sixteinth  = 0;
@@ -136,7 +136,6 @@ static void MidiReadProc(const MIDIPacketList *pktlist, void *refCon, void *conn
                                         clientNode->callback->data = (void *)clientNode;
 
                                         g_callback_queue_push(clientNode->callback);
-                                        pthread_cond_signal(&g_callback_cond);
 
                                         transport->bar++;
                                 }

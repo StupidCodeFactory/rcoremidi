@@ -3,29 +3,35 @@ module RCoreMidi
   class Live
     attr_reader :instruments
 
-    def initialize(bpm, instruments_dir)
+    def initialize(bpm, clips_dir, instruments_dir, &block)
       self.bpm             = bpm
+      self.clips_dir       = clips_dir
       self.instruments_dir = instruments_dir
-      self.instruments     = []
+
+      load_clips
+      load_instruments
     end
 
-    def instrument name, channel
-      puts "Loading instrument: #{name} on channel: #{channel}"
-      file = File.open(File.join(instruments_dir, "#{name}.rb"))
-      instruments  << Instrument.new(name, channel, file)
-    end
-
-    def generate_beats
-      instruments.flat_map do |instrument|
-        instrument.generate_tracks(duration_calculator)
+    def generate_beats(bar)
+      Instrument.all.flat_map do |instrument|
+        instrument.generate_bar(bar, duration_calculator)
       end
     end
 
     private
-    attr_accessor :bpm, :instruments_dir, :instruments
+    attr_accessor :bpm, :clips_dir, :instruments_dir
 
     def duration_calculator
       @duration_calculator ||= DurationCalculator.new(bpm)
     end
+
+    def load_clips
+      Dir["#{clips_dir}/**/*.rb"].each { |file| load file }
+    end
+
+    def load_instruments
+      Dir["#{instruments_dir}/**/*.rb"].each { |file| load file }
+    end
+
   end
 end
