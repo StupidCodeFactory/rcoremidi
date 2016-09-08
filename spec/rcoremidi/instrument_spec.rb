@@ -2,7 +2,17 @@ require 'spec_helper'
 
 RSpec.describe RCoreMidi::Instrument do
 
-  subject { described_class.new(:instrument_name, 0) }
+  subject do
+    described_class.new(:instrument_name, 0) do
+      play 1, :drum
+    end
+  end
+
+  before do
+    RCoreMidi::Clip.register(:drum) do
+      note 'E5', [1, 0, 0, 0] * 4
+    end
+  end
 
   it_behaves_like 'registrable', [:instrument_name, :midi_channel]
 

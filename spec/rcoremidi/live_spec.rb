@@ -23,8 +23,14 @@ RSpec.describe RCoreMidi::Live do
   end
 
   describe '#generate_beats' do
+    let(:duration_calculator) { RCoreMidi::DurationCalculator.new(120) }
     it "return notes" do
-      expect(subject.generate_beats(1)).to eq('asdasd')
+      expect(subject.generate_beats(1)).to eq([
+        RCoreMidi::Note.new('E5', *duration_calculator.timestamps_for(0)),
+        RCoreMidi::Note.new('E5', *duration_calculator.timestamps_for(4)),
+        RCoreMidi::Note.new('E5', *duration_calculator.timestamps_for(8)),
+        RCoreMidi::Note.new('E5', *duration_calculator.timestamps_for(12)),
+      ])
     end
   end
 end

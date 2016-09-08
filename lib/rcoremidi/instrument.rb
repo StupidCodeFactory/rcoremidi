@@ -8,6 +8,7 @@ module RCoreMidi
     def initialize(name, channel, &block)
       self.name    = name
       self.channel = channel
+      instance_eval(&block)
     end
 
     def generate_bar(bar, duration_calculator)

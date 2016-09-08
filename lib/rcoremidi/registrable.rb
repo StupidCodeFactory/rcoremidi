@@ -10,11 +10,11 @@ module RCoreMidi
       end
 
       klass.define_singleton_method :[] do |key|
-        @registry[key]
+        klass.instance_variable_get(:@registry)[key]
       end
 
       klass.define_singleton_method :register do |*args, &block|
-        @registry[args.first] = new(*args, &block)
+        klass.instance_variable_get(:@registry)[args.first] = new(*args, &block)
       end
 
     end

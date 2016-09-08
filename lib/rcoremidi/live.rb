@@ -3,7 +3,7 @@ module RCoreMidi
   class Live
     attr_reader :instruments
 
-    def initialize(bpm, clips_dir, instruments_dir)
+    def initialize(bpm, clips_dir, instruments_dir, &block)
       self.bpm             = bpm
       self.clips_dir       = clips_dir
       self.instruments_dir = instruments_dir
