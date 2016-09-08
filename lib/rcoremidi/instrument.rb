@@ -16,7 +16,15 @@ module RCoreMidi
     end
 
     def play(bar, clip_name, enable_probability = false)
-      track.play(bar, clip(clip_name), enable_probability)
+      if bar.is_a? Range
+        bar.each do |bar_index|
+          track.play(bar_index, clip(clip_name), enable_probability)
+        end
+        track.reset_at = bar.max
+      else
+        track.play(bar, clip(clip_name), enable_probability)
+      end
+
     end
 
     private
@@ -28,7 +36,8 @@ module RCoreMidi
     end
 
     def clip(name)
-      Clip[name]
+      raise ArgumentError.new("Clip #{name} not found.") unless c = Clip[name]
+      c
     end
 
   end

@@ -1,3 +1,5 @@
+require 'musicalism'
+
 module RCoreMidi
   class Note
     attr_accessor :note, :velocity, :channel, :status_byte, :on_timestamp, :off_timestamp

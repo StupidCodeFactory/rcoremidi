@@ -9,7 +9,7 @@ RSpec.describe RCoreMidi::Instrument do
   end
 
   before do
-    RCoreMidi::Clip.register(:drum) do
+    RCobreMidi::Clip.register(:drum) do
       note 'E5', [1, 0, 0, 0] * 4
     end
   end

@@ -7,12 +7,12 @@ module RCoreMidi
     end
 
     def on_tick(bar)
-      to_send = @live.generate_beats.flatten.compact
+      to_send = @live.generate_beats(bar).flatten.compact
+      ap to_send
       send_packets(@destination, to_send)
     end
 
     def start
-      @flag = 0
       trap 'SIGINT', Proc.new {
         dispose
         puts "quiting"
@@ -21,10 +21,10 @@ module RCoreMidi
       sleep
     end
 
-    def live(source, destination, bpm, instruments_dir)
+    def live(source, destination, bpm, clips_dir, instruments_dir)
       connect_to source
       @destination = destination
-      @live = Live.new(bpm, instruments_dir)
+      @live = Live.new(bpm, clips_dir, instruments_dir)
     end
 
     private

@@ -17,6 +17,6 @@ source      = entity.endpoints.detect { |e| e.is_a? RCoreMidi::Source }
 
 client = RCoreMidi::Client.new("Bob")
 
-client.live source, destination, 180, 'clips', 'instruments'
+client.live source, destination, 180, 'script/clips', 'script/instruments'
 
 client.start

@@ -21,7 +21,7 @@ the osx CoreMidi Framework}
   s.summary = %q{This is a ruby extension to provide a wrapper for the osx CoreMidi Framework}
   s.test_files = Dir['spec/**/*.rb']
 
-  s.add_dependency 'activesupport'
+  s.add_dependency 'thor'
   s.add_development_dependency 'rdoc'
   s.add_development_dependency 'rspec'
   s.add_development_dependency 'rspec-its'

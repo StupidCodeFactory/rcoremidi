@@ -4,25 +4,21 @@ module RCoreMidi
 
     include RCoreMidi::Registrable
 
-    attr_reader :notes
+    attr_reader :rythm_sequences, :name
 
     def initialize(name, &block)
       self.name      = name
-      self.notes     = []
-      self.generator = block
-    end
-
-    def call
-      instance_eval(&generator)
+      self.rythm_sequences = []
+      instance_eval(&block)
     end
 
     def note(pitch, probabilities)
-      notes << RythmSequence.new(pitch, probabilities)
+      rythm_sequences << RythmSequence.new(pitch, probabilities)
     end
 
     private
-    attr_accessor :generator, :name
-    attr_writer :notes
+    attr_accessor :generator
+    attr_writer :rythm_sequences, :name
   end
 
 end
