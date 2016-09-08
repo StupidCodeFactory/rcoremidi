@@ -3,17 +3,14 @@ play 'C4',  [
   0.0, 0.0, 0.0, 0.0,
   0.1, 0.1, 1.0, 0.0,
   0.0, 0.0, 0.0, 0.15
-], probability_generator: -> { SecureRandom.random_number }
-# ,mutator: -> (queue) {  }
+]
 
 # play 'C4',  [
 #   0.85, 0.0, 0.0, 0.0,
 #   0.0, 0.0, 0.0, 0.0,
 #   0.1, 0.1, 1.0, 0.0,
 #   0.0, 0.1, 0.4, 1
-# ],
-  # probability_generator: -> { SecureRandom.random_number }
-#   # ,mutator: -> (queue) {  }
+# ]
 
 play 'D4',  [
   0.0, 0.0, 0.0, 0.0,

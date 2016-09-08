@@ -1,5 +1,3 @@
-require 'musicalism'
-
 module RCoreMidi
   class InvalidNotName < ArgumentError; end
 
@@ -12,24 +10,26 @@ module RCoreMidi
       self.channel = channel
     end
 
-
-    def generate_tracks(bar, duration_calculator)
-      reload.tracks.map do |track|
-        track.generate(bar, duration_calculator)
-      end.reduce(:+)
+    def generate_bar(bar, duration_calculator)
+      track.generate(bar, duration_calculator)
     end
 
-    def play(bar, clip)
-      track[bar] = clip
+    def play(bar, clip_name, enable_probability = false)
+      track.play(bar, clip(clip_name), enable_probability)
     end
 
     private
     attr_accessor :name, :channel, :file
     attr_writer :tracks
 
-    def tracks
-      @tracks ||= {}
+    def track
+      @track ||= Track.new
     end
+
+    def clip(name)
+      Clip[name]
+    end
+
   end
 
 end

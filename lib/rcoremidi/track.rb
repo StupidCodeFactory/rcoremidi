@@ -1,23 +1,24 @@
 module RCoreMidi
 
   class Track
-    # def initialize(pitch, probabilities, probability_generator, mutator = nil)
-    #   self.pitch         = pitch
-    #   self.probabilities = probabilities
-    #   self.probabiltiy_generator = probability_generator
-    # end
 
-    # def generate(duration_calculator)
-    #   probabilities.map.with_index do |probability, i|
+    def generate(bar, duration_calculator)
+      clip, enable_probability = clips[bar]
+      return [] unless clip
+      clip.call
+      clip.notes.map { |notes| notes.generate(duration_calculator, enable_probability).compact }.inject(:+)
+    end
 
-    #     next unless probabiltiy_generator.play?(probability)
+    def play(bar, clip, enable_probability)
+      clips[bar] = [clip, enable_probability]
+    end
 
-    #     Note.new(pitch, *duration_calculator.timestamps_for(i))
-    #   end
-    # end
+    private
+    attr_accessor :pitch, :probabilities, :probabiltiy_generator
 
-    # private
-    # attr_accessor :pitch, :probabilities, :probabiltiy_generator
+    def clips
+      @clips ||= {}
+    end
 
   end
 end

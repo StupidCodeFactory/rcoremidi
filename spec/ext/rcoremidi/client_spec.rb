@@ -1,7 +1,7 @@
 require 'spec_helper'
 
 module RCoreMidi
-  describe 'CoreMIDI driver' do
+  RSpec.xdescribe 'CoreMIDI driver' do
     describe Client do
       let(:destination) { Device.all.last.entities.first.endpoints.detect { |e| e.is_a? Destination } }
       let(:source)      { Device.all.last.entities.first.endpoints.detect { |e| e.is_a? Source } }

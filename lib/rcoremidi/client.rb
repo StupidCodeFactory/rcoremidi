@@ -21,10 +21,10 @@ module RCoreMidi
       sleep
     end
 
-    def live(destination, bpm, instruments_dir, &block)
+    def live(source, destination, bpm, instruments_dir)
+      connect_to source
       @destination = destination
       @live = Live.new(bpm, instruments_dir)
-      @live.instance_eval(&block)
     end
 
     private

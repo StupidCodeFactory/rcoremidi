@@ -1,24 +1,26 @@
 module RCoreMidi
 
   class RythmSequence
-    def initialize(pitch, probabilities, probability_generator, mutator = nil)
-      # self.pitch         = pitch
-      # self.probabilities = probabilities
-      # self.probabiltiy_generator = probability_generator
+    def initialize(pitch, probabilities)
+      self.pitch         = pitch
+      self.probabilities = probabilities
     end
 
-    def generate(duration_calculator)
-      # probabilities.map.with_index do |probability, i|
+    def generate(duration_calculator, enable_probability)
+      probabilities.map.with_index do |probability, i|
 
-      #   next unless probabiltiy_generator.play?(probability)
+        next unless probabiltiy_generator(enable_probability).play?(probability)
 
-      #   Note.new(pitch, *duration_calculator.timestamps_for(i))
-      # end
+        Note.new(pitch, *duration_calculator.timestamps_for(i))
+      end
     end
 
-    # private
-    # attr_accessor :pitch, :probabilities, :probabiltiy_generator
+    private
+    attr_accessor :pitch, :probabilities
 
+    def probabiltiy_generator(enable_probability)
+      @probabiltiy_generator ||= ProbabilityGenerator.new
+    end
   end
 
 end

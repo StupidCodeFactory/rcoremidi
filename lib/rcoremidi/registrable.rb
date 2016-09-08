@@ -2,7 +2,12 @@ module RCoreMidi
   module Registrable
 
     def self.included(klass)
+
       klass.instance_variable_set(:@registry, {})
+
+      klass.define_singleton_method :all do |&block|
+        @registry.values
+      end
 
       klass.define_singleton_method :[] do |key|
         @registry[key]

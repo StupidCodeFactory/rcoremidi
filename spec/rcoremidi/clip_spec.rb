@@ -18,13 +18,11 @@ RSpec.describe RCoreMidi::Clip do
     let(:notes)          { [] }
 
     it 'creates a rythm sequence for the given pitch' do
-      expect(RCoreMidi::RythmSequence).to receive(:new).with(
-        'E5', [1,0,0,0] * 4,
-        instance_of(RCoreMidi::ProbabilityGenerator),
-        nil
-      ).and_return(rythm_sequence)
+      expect(RCoreMidi::RythmSequence).to receive(:new).with('E5', [1,0,0,0] * 4).and_return(rythm_sequence)
       expect(subject).to receive(:notes).and_return(notes)
+
       subject.call
+
       expect(notes).to eq([rythm_sequence])
     end
   end

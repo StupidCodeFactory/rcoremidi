@@ -11,5 +11,4 @@ require 'rcoremidi/probabilitY_generator'
 require 'rcoremidi/duration_calculator'
 require 'rcoremidi/live'
 require 'rcoremidi/note'
-require "rcoremidi/instrument"
-require 'rcoremidi/dsl'
+require 'rcoremidi/instrument'

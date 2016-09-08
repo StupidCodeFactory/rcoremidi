@@ -4,6 +4,8 @@ module RCoreMidi
 
     include RCoreMidi::Registrable
 
+    attr_reader :notes
+
     def initialize(name, &block)
       self.name      = name
       self.notes     = []
@@ -14,12 +16,13 @@ module RCoreMidi
       instance_eval(&generator)
     end
 
-    def note(pitch, probabilities, probability_generator: nil, mutator: nil)
-      notes << RythmSequence.new(pitch, probabilities, ProbabilityGenerator.new(&probability_generator), mutator)
+    def note(pitch, probabilities)
+      notes << RythmSequence.new(pitch, probabilities)
     end
 
     private
-    attr_accessor :notes, :generator, :name
+    attr_accessor :generator, :name
+    attr_writer :notes
   end
 
 end
