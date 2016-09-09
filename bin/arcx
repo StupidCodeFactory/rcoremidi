@@ -3,3 +3,5 @@
 require 'bundler'
 require 'bundler/setup'
 require 'rcoremidi/cli'
+
+RCoreMidi::CLI.start(ARGV)
