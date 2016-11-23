@@ -157,6 +157,8 @@ static VALUE add_entites_to_device(VALUE device, VALUE entities, ItemCount count
         ItemCount destination_or_source_count = MIDIEntityGetNumberOfSources(*midi_entity);
         if (destination_or_source_count > 0) {
                 add_source_to_entity(entity, rb_iv_get(entity, "@endpoints"), destination_or_source_count - 1);
+                rb_iv_set(entity, "@device", device);
+
         }
 
         destination_or_source_count = MIDIEntityGetNumberOfDestinations(*midi_entity);
@@ -196,7 +198,7 @@ assign_device_properties(VALUE device, MIDIDeviceRef *midi_device)
         rb_iv_set(device, "@name",         rb_str_new2(CFStringGetCStringPtr(name,         kCFStringEncodingUTF8)));
         rb_iv_set(device, "@driver",       rb_str_new2(CFStringGetCStringPtr(driver,       kCFStringEncodingUTF8)));
         rb_iv_set(device, "@manufacturer", rb_str_new2(CFStringGetCStringPtr(manufacturer, kCFStringEncodingUTF8)));
-        rb_iv_set(device, "@uid",          INT2FIX(uid));
+        rb_iv_set(device, "@uid",          INT2NUM(uid));
 }
 
 

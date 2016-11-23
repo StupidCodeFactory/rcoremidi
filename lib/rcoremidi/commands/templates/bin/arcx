@@ -1,0 +1,6 @@
+#!/usr/bin/env <%= File.basename(Thor::Util.ruby_command) %>
+APP_PATH = File.expand_path('..', __dir__)
+require File.expand_path('config/application', APP_PATH)
+require 'rcoremidi/cli'
+
+RCoreMidi::CLI.start(ARGV)

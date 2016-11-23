@@ -1,7 +1,6 @@
 module RCoreMidi
 
   class Clip
-
     include RCoreMidi::Registrable
 
     attr_reader :rythm_sequences, :name

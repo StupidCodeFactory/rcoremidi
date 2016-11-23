@@ -1,10 +1,11 @@
+require 'rcoremidi/track'
+
 module RCoreMidi
-  class InvalidNotName < ArgumentError; end
 
   class Instrument
 
     include RCoreMidi::Registrable
-
+    attr_reader :name
     def initialize(name, channel, &block)
       self.name    = name
       self.channel = channel
@@ -28,8 +29,9 @@ module RCoreMidi
     end
 
     private
-    attr_accessor :name, :channel, :file
-    attr_writer :tracks
+
+    attr_accessor :channel, :file
+    attr_writer :tracks, :name
 
     def track
       @track ||= Track.new

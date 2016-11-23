@@ -5,3 +5,5 @@ tmp*
 .emacs*
 TAGS
 .byebug_history
+.DS_Store
+dummy

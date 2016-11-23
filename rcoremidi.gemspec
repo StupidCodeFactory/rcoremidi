@@ -25,5 +25,6 @@ the osx CoreMidi Framework}
   s.add_development_dependency 'rdoc'
   s.add_development_dependency 'rspec'
   s.add_development_dependency 'rspec-its'
+  s.add_development_dependency 'aruba'
   s.add_development_dependency 'rake-compiler'
 end

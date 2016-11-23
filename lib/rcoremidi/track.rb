@@ -15,7 +15,9 @@ module RCoreMidi
 
       return [] unless clip
 
-      clip.rythm_sequences.map { |rythm_sequence| rythm_sequence.generate(duration_calculator, enable_probability).compact }.inject(:+)
+      clip.rythm_sequences.map do |rythm_sequence|
+        rythm_sequence.generate(duration_calculator, enable_probability).compact
+      end.inject(:+)
     end
 
     def play(bar, clip, enable_probability)
