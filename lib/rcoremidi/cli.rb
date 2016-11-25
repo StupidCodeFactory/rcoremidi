@@ -33,8 +33,10 @@ module RCoreMidi
     desc 'connections', "Generate a new midi connection"
     register Commands::Connections, 'connections', 'connections', 'Prints available MIDI connections'
 
-    desc 'start', "Start Arcx live session"
     register Commands::Start, 'start', 'start', 'Start Arcx live session'
+
+    register Commands::Stop, 'stop', 'stop', 'Stop Arcx live session'
+    register Commands::Status, 'status', 'status', 'Check if Arcx live session is running'
 
     private
 

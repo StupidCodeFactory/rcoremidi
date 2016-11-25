@@ -12,7 +12,7 @@ VALUE rb_cClient;
 VALUE rb_cPort;
 VALUE rb_cMidiQueue;
 VALUE rb_cMidiPacket;
-VALUE cb_thread;
+
 
 ID new_intern;
 ID devices_intern;
@@ -26,11 +26,6 @@ ID off_intern;
 ID on_timestamp_intern;
 ID off_timestamp_intern;
 
-static ID on_tick_intern;
-
-pthread_mutex_t g_callback_mutex  = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t  g_callback_cond   = PTHREAD_COND_INITIALIZER;
-callback_t      *g_callback_queue = NULL;
 
 VALUE rdebug(VALUE rb_obj)
 {
@@ -64,77 +59,12 @@ const rb_data_type_t midi_endpoint_data_t = {
         0, midi_endpoint_free, midi_endpoint_memsize
 };
 
-/* http://www.burgestrand.se//articles/asynchronous-callbacks-in-ruby-c-extensions/ */
-void g_callback_queue_push(callback_t *callback)
-{
-        callback->next   = g_callback_queue;
-        g_callback_queue = callback;
-}
-
-static callback_t *g_callback_queue_pop(void)
-{
-        callback_t *callback = g_callback_queue;
-        if (callback)
-        {
-                g_callback_queue = callback->next;
-        }
-        return callback;
-}
-
-static void *wait_for_callback_signal(void * w) {
-        callback_waiting_t *waiting = (callback_waiting_t*) w;
-
-        pthread_mutex_lock(&g_callback_mutex);
-
-        while (waiting->abort == false && (waiting->callback = g_callback_queue_pop()) == NULL)
-        {
-                pthread_cond_wait(&g_callback_cond, &g_callback_mutex);
-        }
-
-        pthread_mutex_unlock(&g_callback_mutex);
-
-        return NULL;
-}
-
-static void stop_waiting_for_callback_signal(void *w)
-{
-        callback_waiting_t *waiting = (callback_waiting_t*) w;
-
-        pthread_mutex_lock(&g_callback_mutex);
-        waiting->abort = true;
-        pthread_cond_signal(&g_callback_cond);
-        pthread_mutex_unlock(&g_callback_mutex);
-}
-
-static VALUE boot_callback_event_thread(void * data) {
-        callback_waiting_t waiting = {
-                .callback = NULL, .abort = false
-        };
-
-        while (waiting.abort == false) {
-                rb_thread_call_without_gvl(wait_for_callback_signal, &waiting, stop_waiting_for_callback_signal, &waiting);
-                if (waiting.callback)
-                {
-                        RCoremidiNode *clientNode = (RCoremidiNode *)waiting.callback->data;
-                        pthread_mutex_lock(&waiting.callback->mutex);
-                        rb_funcall(
-                                clientNode->rb_client_obj,
-                                on_tick_intern,
-                                1,
-                                UINT2NUM(clientNode->transport->bar)
-                                );
-                        /* printf ("TRANSPORT: %d \n", clientNode->transport->tick_count); */
-                        pthread_mutex_unlock(&waiting.callback->mutex);
-                }
-        }
-        return Qnil;
-}
 
 
 void
 Init_rcoremidi()
 {
-        on_tick_intern             = rb_intern("on_tick");
+
         new_intern                 = rb_intern("new");
         devices_intern             = rb_intern("@@devices");
         empty_intern               = rb_intern("empty?");
@@ -201,7 +131,4 @@ Init_rcoremidi()
         rb_define_attr(rb_cClient, "name", 1, 1);
         rb_define_attr(rb_cClient, "is_connected", 1, 1);
 
-        cb_thread = rb_thread_create(boot_callback_event_thread, NULL);
-        rb_funcall(cb_thread, rb_intern("abort_on_exception="), 1, Qtrue);
-        rb_cvar_set(rb_cClient, core_midi_cb_thread_intern, cb_thread);
 }

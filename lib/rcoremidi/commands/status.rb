@@ -8,6 +8,7 @@ module RCoreMidi
 
       def log_application_status
         application.log_status
+        exit(0)
       end
     end
   end

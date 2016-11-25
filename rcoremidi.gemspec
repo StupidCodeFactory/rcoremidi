@@ -22,6 +22,7 @@ the osx CoreMidi Framework}
   s.test_files = Dir['spec/**/*.rb']
 
   s.add_dependency 'thor'
+  s.add_dependency 'listen'
   s.add_development_dependency 'rdoc'
   s.add_development_dependency 'rspec'
   s.add_development_dependency 'rspec-its'

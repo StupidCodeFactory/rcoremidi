@@ -2,37 +2,47 @@ module RCoreMidi
   class AppPathname < Pathname
 
     def valid?
-      children.select(&:file?).any? do |file|
-        file.basename.to_s == RCoreMidi::Commands::New::LIVE
-      end
+      true
     end
 
     def connections_file
-      config_dir.children.select(&:file?).detect do |file|
-        file.basename.to_s == RCoreMidi::Commands::New::CONNECTIONS
-      end
+      config_dir.join(RCoreMidi::Commands::New::CONNECTIONS)
     end
 
-    def files
+    def log_file
+      join(RCoreMidi::CLI::LOG_DIR).join('arcx.log')
+    end
 
+    def instrument_files
+      Dir["#{instruments_dir}/**/*.rb"]
+    end
+
+    def clip_files
+      Dir["#{clips_dir}/**/*.rb"]
+    end
+
+    def pid_file
+      pid_dir.join('arcx.pid')
+    end
+
+    def pid_dir
+      tmp_dir.join('pids')
+    end
+
+    def tmp_dir
+      join('tmp')
     end
 
     def config_dir
-      children.select(&:directory?).detect do |dir|
-        dir.basename.to_s == RCoreMidi::CLI::CONFIG_DIR
-      end
+      join('config')
     end
 
     def clips_dir
-      children.select(&:directory?).detect do |dir|
-        dir.basename.to_s == RCoreMidi::CLI::CLIPS_DIR
-      end
+      join(RCoreMidi::CLI::CLIPS_DIR)
     end
 
     def instruments_dir
-      children.select(&:directory?).detect do |dir|
-        dir.basename.to_s == RCoreMidi::CLI::INSTRUMENTS_DIR
-      end
+      join(RCoreMidi::CLI::INSTRUMENTS_DIR)
     end
   end
 end
