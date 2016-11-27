@@ -1,4 +1,5 @@
 require 'rcoremidi/track'
+require 'observer'
 
 module RCoreMidi
 
@@ -12,20 +13,21 @@ module RCoreMidi
       instance_eval(&block)
     end
 
-    def generate_bar(bar, duration_calculator)
-      track.generate(bar, duration_calculator)
+    def generate_bar(bar)
+      track.generate(bar)
     end
 
     def play(bar, clip_name, enable_probability = false)
+      ap [bar, clip_name, enable_probability = false]
+      clp = clip(clip_name)
       if bar.is_a? Range
         bar.each do |bar_index|
-          track.play(bar_index, clip(clip_name), enable_probability)
+          track.play(bar_index, clp, enable_probability)
         end
         track.reset_at = bar.max
       else
-        track.play(bar, clip(clip_name), enable_probability)
+        track.play(bar, clp, enable_probability)
       end
-
     end
 
     private

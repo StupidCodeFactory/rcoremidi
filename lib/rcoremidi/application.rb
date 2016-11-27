@@ -32,6 +32,7 @@ module RCoreMidi
 
       load_connections!
       load_clips!
+
       load_instruments!
 
       if daemon_mode
@@ -43,7 +44,7 @@ module RCoreMidi
 
         client.midi_in = midi_in
         client.midi_out = midi_out
-        client.create_live(config.bpm)
+        client.create_live
 
         config.logger = Logger.new(root.log_file)
 
@@ -57,7 +58,7 @@ module RCoreMidi
       else
         client.midi_in = midi_in
         client.midi_out = midi_out
-        client.create_live(config.bpm)
+        client.create_live
 
         config.logger = Logger.new(STDOUT)
 
@@ -93,7 +94,7 @@ module RCoreMidi
     def listeners
       @listeners ||= Listen.to(root.clips_dir, root.instruments_dir) do |modified, added, removed|
         (modified + added).flat_map.each do |file|
-          puts 'loading %s' % file
+          puts "file: #{file}"
           load file
         end
       end

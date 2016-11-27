@@ -8,9 +8,9 @@ module RCoreMidi
       send_packets(midi_out, to_send)
     end
 
-    def create_live(bpm)
+    def create_live
       connect!
-      self.live = Live.new(bpm)
+      self.live = Live.new
     end
 
     private

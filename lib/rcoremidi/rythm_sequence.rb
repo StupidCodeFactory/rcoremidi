@@ -8,7 +8,7 @@ module RCoreMidi
       self.probabilities         = probabilities
     end
 
-    def generate(duration_calculator, enable_probability)
+    def generate(enable_probability)
       probabilities.map.with_index do |probability, i|
         next unless probability_generator[enable_probability].play?(probability)
 
@@ -24,6 +24,10 @@ module RCoreMidi
         false => ProbabilityGenerator.new,
         true  => ProbabilityGenerator.new { SecureRandom.random_number }
       }
+    end
+
+    def duration_calculator
+      @duration_calculator ||= DurationCalculator.new(RCoreMidi::Application.config.bpm)
     end
   end
 

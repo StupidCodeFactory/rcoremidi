@@ -1,12 +1,14 @@
+require 'rcoremidi/notifier'
+
 module RCoreMidi
 
   class Track
-    attr_accessor :reset_at
+    attr_accessor :reset_at, :clips
     def initialize
       self.reset_at = 0
     end
 
-    def generate(bar, duration_calculator)
+    def generate(bar)
       if bar == reset_at
         return @clips = {} && []
       end
@@ -16,7 +18,7 @@ module RCoreMidi
       return [] unless clip
 
       clip.rythm_sequences.map do |rythm_sequence|
-        rythm_sequence.generate(duration_calculator, enable_probability).compact
+        rythm_sequence.generate(enable_probability).compact
       end.inject(:+)
     end
 
@@ -25,7 +27,7 @@ module RCoreMidi
     end
 
     private
-
+    attr_accessor :notifiers
     def clips
       @clips ||= {}
     end
