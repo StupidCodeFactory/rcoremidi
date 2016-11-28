@@ -6,10 +6,7 @@ module RCoreMidi
       self.tracks = []
     end
 
-    def update(event)
-      tracks.each do |tracks|
-        puts subscriber.notifier
-      end
+    def update(event = nil)
     end
 
     def add_subscriber(clip)

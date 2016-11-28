@@ -4,8 +4,8 @@ module RCoreMidi
 
   class RythmSequence
     def initialize(pitch, probabilities)
-      self.pitch                 = pitch
-      self.probabilities         = probabilities
+      self.pitch         = pitch
+      self.probabilities = probabilities
     end
 
     def generate(enable_probability)

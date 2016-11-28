@@ -10,16 +10,21 @@ module RCoreMidi
     def initialize(name, channel, &block)
       self.name    = name
       self.channel = channel
-      instance_eval(&block)
+      self.block   = block
     end
 
     def generate_bar(bar)
       track.generate(bar)
     end
+    def log(msg)
+      RCoreMidi::Application.config.logger.info msg
+    end
+
+
 
     def play(bar, clip_name, enable_probability = false)
-      ap [bar, clip_name, enable_probability = false]
       clp = clip(clip_name)
+      clp.add_observer(self)
       if bar.is_a? Range
         bar.each do |bar_index|
           track.play(bar_index, clp, enable_probability)
@@ -30,9 +35,18 @@ module RCoreMidi
       end
     end
 
+    def load
+      instance_eval(&block)
+    end
+
+    def update(clip)
+      track.reset
+      load
+    end
+
     private
 
-    attr_accessor :channel, :file
+    attr_accessor :channel, :file, :block
     attr_writer :tracks, :name
 
     def track

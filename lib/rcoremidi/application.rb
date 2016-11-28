@@ -94,7 +94,6 @@ module RCoreMidi
     def listeners
       @listeners ||= Listen.to(root.clips_dir, root.instruments_dir) do |modified, added, removed|
         (modified + added).flat_map.each do |file|
-          puts "file: #{file}"
           load file
         end
       end

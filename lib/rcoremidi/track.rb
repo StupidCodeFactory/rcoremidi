@@ -13,23 +13,27 @@ module RCoreMidi
         return @clips = {} && []
       end
 
-      clip, enable_probability = clips[bar]
+      clip, enable_probability = bars[bar]
 
       return [] unless clip
-
       clip.rythm_sequences.map do |rythm_sequence|
         rythm_sequence.generate(enable_probability).compact
       end.inject(:+)
     end
 
     def play(bar, clip, enable_probability)
-      clips[bar] = [clip, enable_probability]
+      bars[bar] = [clip, enable_probability]
+    end
+
+    def reset
+      @bars = {}
     end
 
     private
     attr_accessor :notifiers
-    def clips
-      @clips ||= {}
+
+    def bars
+      @bars ||= {}
     end
 
   end
