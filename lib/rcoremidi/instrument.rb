@@ -50,7 +50,7 @@ module RCoreMidi
     attr_writer :tracks, :name
 
     def track
-      @track ||= Track.new
+      @track ||= Track.new(channel)
     end
 
     def clip(name)

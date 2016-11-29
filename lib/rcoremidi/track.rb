@@ -3,9 +3,12 @@ require 'rcoremidi/notifier'
 module RCoreMidi
 
   class Track
-    attr_accessor :reset_at, :clips
-    def initialize
+
+    attr_accessor :reset_at, :clips, :channel
+
+    def initialize(channel)
       self.reset_at = 0
+      self.channel = channel
     end
 
     def generate(bar)
@@ -17,7 +20,7 @@ module RCoreMidi
 
       return [] unless clip
       clip.rythm_sequences.map do |rythm_sequence|
-        rythm_sequence.generate(enable_probability).compact
+        rythm_sequence.generate(enable_probability, channel).compact
       end.inject(:+)
     end
 
