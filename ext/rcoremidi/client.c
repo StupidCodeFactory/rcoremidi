@@ -205,7 +205,7 @@ static void MidiReadProc(const MIDIPacketList *pktlist, void *refCon, void *conn
                                 break;
                         case kMIDITick:
                                 transport->tick_count++;
-
+                                printf("%d\n", transport->tick_count);
                                 if ((transport->tick_count % 96) == 0) {
                                         clientNode->callback->data = (void *)clientNode;
 
