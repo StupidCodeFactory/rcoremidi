@@ -25,7 +25,8 @@ RSpec.describe RCoreMidi::Commands::New  do
       RCoreMidi::CLI::DIRS.each do |dir|
         Dir.exists?(dir)
       end
-      application_file = File.join(base_dir, described_class::APPLICATION_FILE)
+
+      application_file = File.join('spec', application_name, described_class::APPLICATION)
       expect(File.exists?(application_file)).to be true
       expect(File.read(application_file)).to eq("require 'rcoremidi'\n\nclass DummyApp < RCoreMidi::Application\n\nend\n")
     end
