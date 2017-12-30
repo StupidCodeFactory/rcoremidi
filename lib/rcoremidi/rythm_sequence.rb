@@ -3,9 +3,10 @@ require 'rcoremidi/probability_generator'
 module RCoreMidi
 
   class RythmSequence
-    def initialize(pitch, probabilities)
-      self.pitch         = pitch
-      self.probabilities = probabilities
+    def initialize(pitch, beat_resolution, probabilities)
+      self.pitch           = pitch
+      self.beat_resolution = beat_resolution
+      self.probabilities   = probabilities
     end
 
     def generate(enable_probability, channel)
@@ -17,7 +18,7 @@ module RCoreMidi
     end
 
     private
-    attr_accessor :pitch, :probabilities
+    attr_accessor :pitch, :probabilities, :beat_resolution
 
     def probability_generator
       @probability_generator ||= {

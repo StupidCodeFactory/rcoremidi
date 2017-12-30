@@ -16,13 +16,11 @@ RSpec.describe RCoreMidi::Clip do
     let(:rythm_sequence) { instance_double(RCoreMidi::RythmSequence) }
     let(:pitch)          { 'E5' }
     let(:notes)          { [1,0,0,0] * 4 }
-    let(:raw_rythm_clip) do
-      { 16 => notes }
-    end
+    let(:beat_resolution) { 16 }
 
     it 'parses RythmSequence' do
-      expect(RCoreMidi::RythmSequence).to receive(:new).with(pitch, raw_rythm_clip).and_return(rythm_sequence)
-      subject.note(pitch, raw_rythm_clip)
+      expect(RCoreMidi::RythmSequence).to receive(:new).with(pitch, beat_resolution, notes).and_return(rythm_sequence)
+      subject.note(pitch, beat_resolution, notes)
 
       expect(subject.rythm_sequences).to eq([rythm_sequence])
     end

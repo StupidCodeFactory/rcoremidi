@@ -13,8 +13,8 @@ module RCoreMidi
       self.rythm_sequences = []
     end
 
-    def note(pitch, probabilities)
-      self.rythm_sequences << RythmSequence.new(pitch, probabilities)
+    def note(pitch, beat_resolution, probabilities)
+      self.rythm_sequences << RythmSequence.new(pitch, beat_resolution, probabilities)
     end
 
     def load(&block)
