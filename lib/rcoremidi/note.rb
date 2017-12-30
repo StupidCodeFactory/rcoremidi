@@ -26,7 +26,7 @@ module RCoreMidi
     end
 
     def ==(other)
-      note == note && velocity == other.velocity
+      !!(note == other.note && velocity == other.velocity)
     end
     private
     attr_writer :note, :velocity, :at_offset, :status_byte
