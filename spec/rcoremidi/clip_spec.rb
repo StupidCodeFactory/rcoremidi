@@ -12,18 +12,19 @@ RSpec.describe RCoreMidi::Clip do
 
   it_behaves_like 'registrable', [:clip_name]
 
-  describe '#call' do
+  describe '#note' do
+    let(:rythm_sequence) { instance_double(RCoreMidi::RythmSequence) }
+    let(:pitch)          { 'E5' }
+    let(:notes)          { [1,0,0,0] * 4 }
+    let(:raw_rythm_clip) do
+      { 16 => notes }
+    end
 
-    let(:rythm_sequence) { double(RCoreMidi::RythmSequence) }
-    let(:notes)          { [] }
+    it 'parses RythmSequence' do
+      expect(RCoreMidi::RythmSequence).to receive(:new).with(pitch, raw_rythm_clip).and_return(rythm_sequence)
+      subject.note(pitch, raw_rythm_clip)
 
-    it 'creates a rythm sequence for the given pitch' do
-      expect(RCoreMidi::RythmSequence).to receive(:new).with('E5', [1,0,0,0] * 4).and_return(rythm_sequence)
-      expect(subject).to receive(:notes).and_return(notes)
-
-      subject.call
-
-      expect(notes).to eq([rythm_sequence])
+      expect(subject.rythm_sequences).to eq([rythm_sequence])
     end
   end
 end
