@@ -67,7 +67,7 @@ static VALUE boot_callback_event_thread(void * data) {
                                 clientNode->rb_client_obj,
                                 rb_intern("on_tick"),
                                 1,
-                                UINT2NUM(clientNode->transport->bar)
+                                UINT2NUM(clientNode->transport->tick_count)
                                 );
                         /* printf ("TRANSPORT: %d \n", clientNode->transport->tick_count); */
                         pthread_mutex_unlock(&waiting.callback->mutex);
@@ -119,6 +119,7 @@ static RCoreMidiTransport * reset_transport(RCoreMidiTransport * transport) {
         transport->quarter    = 0;
         transport->eigth      = 0;
         transport->sixteinth  = 0;
+        transport->state      = kMIDIStop;
         return transport;
 }
 
@@ -190,46 +191,39 @@ static void MidiReadProc(const MIDIPacketList *pktlist, void *refCon, void *conn
 
                 for (i = 0; i < packet->length; ++i) {
 
+                        /* printf("packet : %04x\n", packet->data[i]); */
                         switch(packet->data[i]) {
                         case kMIDIStart:
-                                /* static MIDITimeStamp timestamp = 0; */
+                                printf("kMIDIStart\n");
+                                transport->state = kMIDIStart;
+                                transport->tick_count++;
                                 transport->current_timestamp = mach_absolute_time();
-                                clientNode->callback->data = (void *)clientNode;
+                                /* clientNode->callback->data = (void *)clientNode; */
 
 
-                                g_callback_queue_push(clientNode->callback);
+                                /* g_callback_queue_push(clientNode->callback); */
 
                                 break;
                         case kMIDIStop:
                                 printf("Stoping Client...\n");
+                                transport->state = kMIDIStop;
                                 break;
                         case kMIDITick:
                                 transport->tick_count++;
-                                printf("%d\n", transport->tick_count);
-                                if ((transport->tick_count % 96) == 0) {
-                                        clientNode->callback->data = (void *)clientNode;
+                                /* printf("%d\n", transport->tick_count); */
+                                clientNode->callback->data = (void *)clientNode;
 
-                                        g_callback_queue_push(clientNode->callback);
-
-                                        transport->bar++;
-                                }
-                                // quarter
-                                if ((transport->tick_count % 24) == 0) {
-                                        transport->quarter++;
-                                }
-                                // eigth
-                                if ((transport->tick_count % 12) == 0) {
-                                        transport->eigth++;
-                                }
-                                // sixteinth
-                                if ((transport->tick_count % 8) == 0) {
-                                        transport->sixteinth++;
-                                }
-
+                                g_callback_queue_push(clientNode->callback);
 
                                 break;
                         case kMIDISongPositionPointer:
-                                reset_transport(transport);
+                                printf("kMIDISongPositionPointer\n");
+
+                                if (transport->state == kMIDIStop) {
+                                        transport->tick_count++;
+                                } else {
+                                        reset_transport(transport);
+                                }
                                 break;
                         }
 

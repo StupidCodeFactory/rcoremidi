@@ -5,9 +5,9 @@ module RCoreMidi
   class Live
     attr_reader :instruments
 
-    def generate_beats(bar)
+    def generate_beats(current_tick)
       Instrument.all.flat_map do |instrument|
-        instrument.generate_bar(bar)
+        instrument.generate_beat(current_tick)
       end
     end
 

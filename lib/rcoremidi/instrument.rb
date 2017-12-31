@@ -13,8 +13,8 @@ module RCoreMidi
       self.block   = block
     end
 
-    def generate_bar(bar)
-      track.generate(bar)
+    def generate_beat(current_tick)
+      track.generate(current_tick)
     end
     def log(msg)
       RCoreMidi::Application.config.logger.info msg

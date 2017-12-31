@@ -11,17 +11,18 @@ module RCoreMidi
       self.channel = channel
     end
 
-    def generate(bar)
-      if bar == reset_at
-        return @clips = {} && []
-      end
+    def generate(current_tick)
+      puts current_tick
+      # if current_tick == reset_at
+      #   return @clips = {} && []
+      # end
 
-      clip, enable_probability = bars[bar]
+      # clip, enable_probability = bars[bar]
 
-      return [] unless clip
-      clip.rythm_sequences.map do |rythm_sequence|
-        rythm_sequence.generate(enable_probability, channel).compact
-      end.inject(:+)
+      # return [] unless clip
+      # clip.rythm_sequences.map do |rythm_sequence|
+      #   rythm_sequence.generate(enable_probability, channel).compact
+      # end.inject(:+)
     end
 
     def play(bar, clip, enable_probability)
