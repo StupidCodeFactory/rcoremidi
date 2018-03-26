@@ -1,8 +1,9 @@
+# frozen_string_literal: true
+
 require 'rcoremidi/probability_generator'
 
 module RCoreMidi
-
-  class RythmSequence
+  class RythmSequence # :nodoc:
     def initialize(pitch, beat_resolution, probabilities)
       self.pitch           = pitch
       self.beat_resolution = beat_resolution
@@ -18,6 +19,7 @@ module RCoreMidi
     end
 
     private
+
     attr_accessor :pitch, :probabilities, :beat_resolution
 
     def probability_generator
@@ -31,5 +33,4 @@ module RCoreMidi
       @duration_calculator ||= DurationCalculator.new(RCoreMidi::Application.config.bpm)
     end
   end
-
 end

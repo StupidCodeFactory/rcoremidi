@@ -1,8 +1,9 @@
+# frozen_string_literal: true
+
 require 'rcoremidi/duration_calculator'
 
 module RCoreMidi
-
-  class Live
+  class Live # :nodoc:
     attr_reader :instruments
 
     def generate_beats(current_tick)
@@ -10,6 +11,5 @@ module RCoreMidi
         instrument.generate_beat(current_tick)
       end
     end
-
   end
 end

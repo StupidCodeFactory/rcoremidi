@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'yaml'
 require 'rcoremidi/app_pathname'
 require 'rcoremidi/client'
@@ -5,9 +7,7 @@ require 'logger'
 require 'listen'
 
 module RCoreMidi
-
-  class Configuration
-
+  class Configuration # :nodoc:
     attr_accessor :bpm, :logger
 
     def initialize
@@ -16,20 +16,18 @@ module RCoreMidi
     end
   end
 
-  class Application
+  class Application # :nodoc:
     attr_reader :root, :connections
-
     def self.config
       @@config ||= Configuration.new
     end
 
     def initialize(app_path)
       self.root = AppPathname.new(app_path).expand_path
-      raise "Could not find application root" unless root.valid?
+      raise 'Could not find application root' unless root.valid?
     end
 
     def run(daemon_mode = false)
-
       load_connections!
       load_clips!
 
@@ -37,10 +35,9 @@ module RCoreMidi
 
       if daemon_mode
         Process.daemon
-        Process.setproctitle('arcx:live %s' % root)
+        Process.setproctitle(format('arcx:live %s', root))
         write_pid_file
         redirect_output
-
 
         client.midi_in = midi_in
         client.midi_out = midi_out
@@ -48,9 +45,9 @@ module RCoreMidi
 
         config.logger = Logger.new(root.log_file)
 
-        trap 'SIGINT', Proc.new {
+        trap 'SIGINT', proc {
           client.dispose
-          puts "quiting"
+          puts 'quiting'
           exit(0)
         }
 
@@ -62,9 +59,9 @@ module RCoreMidi
 
         config.logger = Logger.new(STDOUT)
 
-        trap 'SIGINT', Proc.new {
+        trap 'SIGINT', proc {
           client.dispose
-          puts "quiting"
+          puts 'quiting'
           exit(0)
         }
 
@@ -74,9 +71,9 @@ module RCoreMidi
 
     def stop
       if root.pid_file.exist?
-        Process.kill("QUIT", Integer(root.pid_file.read))
+        Process.kill('QUIT', Integer(root.pid_file.read))
       else
-        config.logger.info("No Arcx application seems to be running")
+        config.logger.info('No Arcx application seems to be running')
       end
     end
 
@@ -89,10 +86,11 @@ module RCoreMidi
     end
 
     private
+
     attr_writer :root, :connections
 
     def listeners
-      @listeners ||= Listen.to(root.clips_dir, root.instruments_dir) do |modified, added, removed|
+      @listeners ||= Listen.to(root.clips_dir, root.instruments_dir) do |modified, added, _removed|
         (modified + added).flat_map.each do |file|
           load file
         end
@@ -101,14 +99,14 @@ module RCoreMidi
 
     def wait_for_start
       listeners.start
-      config.logger.info "Arcx live successfully started"
+      config.logger.info 'Arcx live successfully started'
       sleep
     end
 
     def redirect_output
       FileUtils.mkdir_p root.log_file.dirname
       # FileUtils.touch root.log_file
-      root.log_file.chmod(0644)
+      root.log_file.chmod(0o644)
       $stderr.reopen(root.log_file, 'a')
       $stdout.reopen($stderr)
       $stdout.sync = $stderr.sync = true
@@ -119,7 +117,7 @@ module RCoreMidi
         check_pid
       else
         root.pid_file.open(::File::CREAT | ::File::EXCL | ::File::WRONLY) do |f|
-          f.write("#{Process.pid}")
+          f.write(Process.pid.to_s)
         end
         at_exit do
           root.pid_file.delete if root.pid_file.exist?
@@ -156,6 +154,7 @@ module RCoreMidi
     end
 
     def midi_in
+      pp connection
       @midi_in ||= MIDIObject.find_by_unique_id(connection.last['midi_in'])
     end
 
@@ -168,7 +167,7 @@ module RCoreMidi
     end
 
     def load_connections!
-      self.connections = YAML.load(root.connections_file.read)
+      self.connections = YAML.safe_load(root.connections_file.read)
     end
 
     def load_clips!

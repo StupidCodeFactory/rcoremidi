@@ -1,12 +1,14 @@
-module RCoreMidi
-  class Client
+# frozen_string_literal: true
 
+module RCoreMidi
+  class Client # :nodoc:
     attr_accessor :midi_in, :midi_out
 
     def on_tick(current_tick)
-      # puts current_tick
+      puts current_tick
       to_send = live.generate_beats(current_tick).flatten.compact
-      # send_packets(midi_out, to_send)
+      ap to_send
+      send_packets(midi_out, to_send)
     end
 
     def create_live
@@ -15,11 +17,11 @@ module RCoreMidi
     end
 
     private
+
     attr_accessor :live
 
     def connect!
       connect_to midi_in
     end
-
   end
 end
