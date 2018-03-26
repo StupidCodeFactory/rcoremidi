@@ -138,7 +138,6 @@ VALUE client_alloc(VALUE klass)
         clientNode->transport     = transport_alloc();
         clientNode->in            = malloc(sizeof(MIDIPortRef));
         clientNode->out           = malloc(sizeof(MIDIPortRef));
-        clientNode->out           = malloc(sizeof(MIDIPortRef));
         clientNode->callback      = malloc(sizeof(callback_t));
         pthread_mutex_init(&clientNode->callback->mutex, NULL);
         pthread_cond_init(&clientNode->callback->cond, NULL);
