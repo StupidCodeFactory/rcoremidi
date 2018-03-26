@@ -3,7 +3,7 @@ static ByteCount max_packet_list_size = 65536;
 static unsigned long mspm = 60000000;
 static ByteCount note_on_packet_size = 2;
 static VALUE cb_thread;
-
+static int midi_beat_start = 0;
 
 pthread_mutex_t g_callback_mutex  = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t  g_callback_cond   = PTHREAD_COND_INITIALIZER;
@@ -82,8 +82,6 @@ static void midi_node_free(void *ptr)
         RCoremidiNode *tmp = ptr;
         if(tmp) {
                 // May be (also) use MIDICLientDispose() from OSX API?
-                // Anyway is this usefull or should i just need to
-                // free the struct RCoremidiNode. Any just to make sure i free all
                 free(tmp->client);
                 free(tmp->transport);
                 free(tmp->name);
@@ -175,7 +173,10 @@ static void notifyProc(const MIDINotification *notification, void *refCon)
         }
 }
 
-
+static int calculate_current_tick(lsb, msb) {
+        int midi_beat_start = (lsb << 7) | msb;
+        return midi_beat_start * 6;
+}
 static void MidiReadProc(const MIDIPacketList *pktlist, void *refCon, void *connRefCon) {
 
         pthread_mutex_lock(&g_callback_mutex);
@@ -193,37 +194,27 @@ static void MidiReadProc(const MIDIPacketList *pktlist, void *refCon, void *conn
                         /* printf("packet : %04x\n", packet->data[i]); */
                         switch(packet->data[i]) {
                         case kMIDIStart:
-                                printf("kMIDIStart\n");
+                                /* printf("kMIDIStart\n"); */
                                 transport->state = kMIDIStart;
-                                transport->tick_count++;
                                 transport->current_timestamp = mach_absolute_time();
-                                /* clientNode->callback->data = (void *)clientNode; */
-
-
-                                /* g_callback_queue_push(clientNode->callback); */
-
                                 break;
                         case kMIDIStop:
-                                printf("Stoping Client...\n");
+                                /* printf("Stoping Client...\n"); */
                                 transport->state = kMIDIStop;
                                 break;
                         case kMIDITick:
                                 transport->tick_count++;
-                                /* printf("%d\n", transport->tick_count); */
-                                clientNode->callback->data = (void *)clientNode;
+                                /* printf("C: tick_count %d\n", transport->tick_count); */
 
+                                clientNode->callback->data = (void *)clientNode;
                                 g_callback_queue_push(clientNode->callback);
 
                                 break;
                         case kMIDISongPositionPointer:
-                                printf("kMIDISongPositionPointer\n");
-
-                                if (transport->state == kMIDIStop) {
-                                        transport->tick_count++;
-                                } else {
-                                        reset_transport(transport);
-                                }
+                                transport->tick_count = calculate_current_tick(packet->data[i+1], packet->data[i+2]);
                                 break;
+                        /* default: */
+                                /* printf("DEFAULT packet : %04x\n", packet->data[i]); */
                         }
 
 
