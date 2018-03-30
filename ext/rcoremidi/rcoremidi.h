@@ -34,22 +34,27 @@ extern ID off_timestamp_intern;
 extern const rb_data_type_t midi_endpoint_data_t;
 extern const rb_data_type_t midi_object_data_t;
 
-typedef struct callback_t {
-pthread_mutex_t mutex;
-pthread_cond_t  cond;
+typedef struct tick_callback_t {
+        pthread_mutex_t mutex;
+        pthread_cond_t  cond;
 
-struct callback_t *next;
-void       *data;
-bool       handled;
-} callback_t;
+        struct callback_t *next;
+        void       *data;
+} tick_callback_t;
+
+typedef enum  {
+        callback_t, midi_start_callback_t, midi_stop_callback_t
+} waiting_callback_t;
 
 extern pthread_mutex_t g_callback_mutex;
 extern pthread_cond_t  g_callback_cond;
 extern callback_t      *g_callback_queue;
 
+// callback queue
 typedef struct callback_waiting_t {
         callback_t *callback;
         bool       abort;
+        enum type
 } callback_waiting_t;
 
 typedef struct midi_send_params_t {

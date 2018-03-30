@@ -7,10 +7,10 @@ static int midi_beat_start = 0;
 
 pthread_mutex_t g_callback_mutex  = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t  g_callback_cond   = PTHREAD_COND_INITIALIZER;
-callback_t      *g_callback_queue = NULL;
+callback_t      *g_callback_queue = ULL;
 
 /* http://www.burgestrand.se//articles/asynchronous-callbacks-in-ruby-c-extensions/ */
-void g_callback_queue_push(callback_t *callback)
+void g_callback_queue_push(tick_callback_t *callback)
 {
         callback->next   = g_callback_queue;
         g_callback_queue = callback;
@@ -113,10 +113,6 @@ RCoremidiNode * client_get_data(VALUE self) {
 
 static RCoreMidiTransport * reset_transport(RCoreMidiTransport * transport) {
         transport->tick_count = 0;
-        transport->bar        = 1;
-        transport->quarter    = 0;
-        transport->eigth      = 0;
-        transport->sixteinth  = 0;
         transport->state      = kMIDIStop;
         return transport;
 }
@@ -197,6 +193,10 @@ static void MidiReadProc(const MIDIPacketList *pktlist, void *refCon, void *conn
                                 /* printf("kMIDIStart\n"); */
                                 transport->state = kMIDIStart;
                                 transport->current_timestamp = mach_absolute_time();
+
+                                clientNode->callback->data = (void *)clientNode;
+                                g_callback_queue_push(clientNode->callback);
+
                                 break;
                         case kMIDIStop:
                                 /* printf("Stoping Client...\n"); */
@@ -204,7 +204,7 @@ static void MidiReadProc(const MIDIPacketList *pktlist, void *refCon, void *conn
                                 break;
                         case kMIDITick:
                                 transport->tick_count++;
-                                /* printf("C: tick_count %d\n", transport->tick_count); */
+                                printf("C: tick_count %d\n", transport->tick_count);
 
                                 clientNode->callback->data = (void *)clientNode;
                                 g_callback_queue_push(clientNode->callback);
@@ -412,6 +412,7 @@ VALUE client_init(VALUE self, VALUE name)
         }
 
         rb_iv_set(self, "@name", name);
+        rb_iv_set(self, "@started", QFalse);
 
 
         clientNode->rb_client_obj = self;

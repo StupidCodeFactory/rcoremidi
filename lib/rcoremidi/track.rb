@@ -13,7 +13,8 @@ module RCoreMidi
     end
 
     def generate(current_tick)
-      # puts current_tick
+
+      puts current_tick
       # if current_tick == reset_at
       #   return @clips = {} && []
       # end

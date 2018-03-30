@@ -7,7 +7,7 @@ module RCoreMidi
     def on_tick(current_tick)
       puts current_tick
       to_send = live.generate_beats(current_tick).flatten.compact
-      ap to_send
+
       send_packets(midi_out, to_send)
     end
 
