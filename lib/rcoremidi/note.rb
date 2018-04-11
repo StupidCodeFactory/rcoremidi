@@ -2,8 +2,8 @@ require 'musicalism'
 
 module RCoreMidi
   class Note
-    attr_accessor :note, :velocity, :channel, :status_byte, :on_timestamp, :off_timestamp
-    private :note=, :velocity=, :channel=, :status_byte=, :on_timestamp=
+    attr_accessor :note, :velocity, :channel, :status_byte, :on_timestamp, :off_timestamp, :channel
+    private :note=, :velocity=, :status_byte=, :on_timestamp=
 
     NOTE_ON  = 0x90
     NOTE_OFF = 0x80

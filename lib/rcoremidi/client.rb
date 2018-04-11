@@ -4,15 +4,19 @@ module RCoreMidi
   class Client # :nodoc:
     attr_accessor :midi_in, :midi_out
 
-    def on_tick(current_tick)
-      to_send = live.generate_beats(current_tick).flatten.compact
-
+    def on_tick(midi_beat_clock)
+      puts midi_beat_clock
+      # return unless bar_start?(midi_beat_clock)
+      byebug
+      to_send = live.beats_for(current_tick)
+      ap to_send
       send_packets(midi_out, to_send)
     end
 
     def create_live
       connect!
       self.live = Live.new
+      live.load
     end
 
     private

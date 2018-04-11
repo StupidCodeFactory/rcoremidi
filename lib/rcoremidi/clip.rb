@@ -15,8 +15,11 @@ module RCoreMidi
       self.rythm_sequences = []
     end
 
-    def note(pitch, beat_resolution, probabilities)
-      rythm_sequences << RythmSequence.new(pitch, beat_resolution, probabilities)
+    def note(pitch, rhythm_pattern)
+      rhythm_pattern = RythmSequence.new(pitch, rhythm_pattern)
+      rhythm_pattern.generate.each do |note, i|
+        beats[i] << note if note
+      end
     end
 
     def load(&block)
@@ -24,6 +27,10 @@ module RCoreMidi
       changed
       instance_eval(&block)
       notify_observers(self)
+    end
+
+    def beats
+      @notes ||= Array.new(96) { [] }
     end
 
     private

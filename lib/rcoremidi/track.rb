@@ -5,42 +5,28 @@ require 'rcoremidi/notifier'
 module RCoreMidi
   class Track # :nodoc:
     attr_accessor :reset_at, :clips, :channel
-    PPQN = 96
 
-    def initialize(channel)
-      self.reset_at = 0
-      self.channel = channel
+    def play(bar, clip, channel = 0)
+      if bars[bar].nil?
+        clip.beats.each { |notes| notes.each { |note| note.channel = channel } }
+        bars[bar] = clip.beats
+      else
+        bars[bar].each_with_index do |existing_notes, i|
+          clip.beats[i].each { |note| note.channel = channel }
+          existing_notes |= clip.beats[i]
+        end
+      end
     end
 
-    def generate(current_tick)
-
-      # puts current_tick
-      # if current_tick == reset_at
-      #   return @clips = {} && []
-      # end
-      bar = current_tick / PPQN
-      clip, enable_probability = bars[bar]
-
-      return [] unless clip
-      clip.rythm_sequences.map do |rythm_sequence|
-        rythm_sequence.generate(enable_probability, channel).compact
-      end.inject(:+)
-    end
-
-    def play(bar, clip, enable_probability)
-      bars[bar] = [clip, enable_probability]
+    def bars
+      @bars ||= {}
     end
 
     def reset
       @bars = {}
     end
-
     private
 
     attr_accessor :notifiers
-
-    def bars
-      @bars ||= {}
-    end
   end
 end

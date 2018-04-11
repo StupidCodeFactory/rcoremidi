@@ -13,8 +13,8 @@ module RCoreMidi
     # seixteenth note = 240 ticks
     def timestamps_for(note_index, resolution = 16)
       # A probabilities array of length 16 means
-      # our current resolution is an eigthth note
-      # 48 ticks is our current resolution
+      # our current resolution is an 16th note
+
       on = (mpt * 6 * note_index).round
       [on, (on + default_note_off_offset).round]
     end
