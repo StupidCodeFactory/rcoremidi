@@ -172,7 +172,7 @@ static void notifyProc(const MIDINotification *notification, void *refCon)
 }
 
 static int calculate_current_tick(lsb, msb) {
-        int midi_beat_start = (lsb << 7) | msb;
+        int midi_beat_start = (msb << 7) | lsb;
         return midi_beat_start * 6;
 }
 
