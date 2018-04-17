@@ -15,7 +15,8 @@ module RCoreMidi
       # A probabilities array of length 16 means
       # our current resolution is an 16th note
 
-      on = (mpt * 6 * note_index).round
+      # on = (mpt * 6 * note_index).round
+      on = 0
       [on, (on + default_note_off_offset).round]
     end
 

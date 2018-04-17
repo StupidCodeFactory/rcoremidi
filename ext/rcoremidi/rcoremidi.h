@@ -11,6 +11,11 @@
 #include "midi_object.h"
 
 
+
+extern VALUE rb_cCachedThreadPool;
+
+
+
 extern VALUE rb_cConectionManager;
 extern VALUE rb_cDevice;
 extern VALUE rb_cEntity;

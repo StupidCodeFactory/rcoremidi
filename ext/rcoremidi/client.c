@@ -4,7 +4,7 @@ static unsigned long mspm = 60000000;
 static ByteCount note_on_packet_size = 2;
 static VALUE cb_thread;
 static int midi_beat_start = 0;
-
+static int last_midi_beat = 0;
 pthread_mutex_t g_callback_mutex  = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t  g_callback_cond   = PTHREAD_COND_INITIALIZER;
 callback_t      *g_callback_queue = NULL;
@@ -51,18 +51,27 @@ static void stop_waiting_for_callback_signal(void *w)
         pthread_mutex_unlock(&g_callback_mutex);
 }
 
-static VALUE handle_callback(void *callback) {
+static VALUE handle_callback(VALUE block_arg, VALUE data, int argc, VALUE* argv) {
 
-        callback_t *cb = (callback_t*)callback;
-        RCoremidiNode *clientNode = (RCoremidiNode *)cb->data;
+        printf("Handle callback: args: %d\n", argc);
+        /* callback_t *cb = (callback_t*)callback; */
+        /* RCoremidiNode *clientNode = (RCoremidiNode *)cb->data; */
 
-        rb_funcall(clientNode->rb_client_obj, rb_intern("on_tick"), 1, UINT2NUM(clientNode->transport->tick_count));
+        /* rb_funcall(clientNode->rb_client_obj, rb_intern("on_tick"), 1, UINT2NUM(clientNode->transport->tick_count)); */
 
-        pthread_mutex_lock(&cb->mutex);
-        pthread_cond_signal(&g_callback_cond);
-        pthread_mutex_unlock(&cb->mutex);
+        /* pthread_mutex_lock(&cb->mutex); */
+        /* pthread_cond_signal(&g_callback_cond); */
+        /* pthread_mutex_unlock(&cb->mutex); */
         return Qnil;
 }
+
+/* VALUE my_block(VALUE block_arg, VALUE data, int argc, VALUE* argv) */
+/* { */
+/*   /\* block_arg will be the first yielded value *\/ */
+/*   /\* data will be the last argument you passed to rb_block_call *\/ */
+/*   /\* if multiple values are yielded, use argc/argv to access them *\/ */
+/* } */
+
 static VALUE boot_callback_event_thread(void * data) {
         callback_waiting_t waiting = {
                 .callback = NULL, .abort = false
@@ -72,7 +81,10 @@ static VALUE boot_callback_event_thread(void * data) {
                 rb_thread_call_without_gvl(wait_for_callback_signal, &waiting, stop_waiting_for_callback_signal, &waiting);
                 if (waiting.callback)
                 {
-                        rb_thread_create(handle_callback, waiting.callback);
+                        callback_t *cb = (callback_t*)waiting.callback;
+                        RCoremidiNode *clientNode = (RCoremidiNode *)cb->data;
+                        VALUE pool = rb_iv_get(clientNode->rb_client_obj, "@pool");
+                        rb_block_call(pool, rb_intern("post"), 0, NULL, handle_callback, Qnil);
                 }
         }
         return Qnil;
@@ -188,45 +200,21 @@ static void MidiReadProc(const MIDIPacketList *pktlist, void *refCon, void *conn
 
                 for (i = 0; i < packet->length; ++i) {
 
-                        /* printf("packet : %04x\n", packet->data[i]); */
                         switch(packet->data[i]) {
                         case kMIDIStart:
-                                /* printf("kMIDIStart\n"); */
                                 transport->state = kMIDIStart;
                                 transport->current_timestamp = mach_absolute_time();
-
-                                /* pthread_mutex_lock(&g_callback_mutex); */
-                                /* clientNode->callback->data = (void *)clientNode; */
-                                /* g_callback_queue_push(clientNode->callback); */
-                                /* pthread_mutex_unlock(&g_callback_mutex); */
-                                /* pthread_cond_signal(&g_callback_cond); */
-
-
+                                transport->tick_count = -1;
+                                break;
+                        case kMIDIContinue:
+                                transport->tick_count = last_midi_beat - 1;
                                 break;
                         case kMIDIStop:
-                                /* printf("Stoping Client...\n"); */
                                 transport->state = kMIDIStop;
-
-                                /* callback_waiting_t *waiting; */
-
-                                /* int callback_count = 0; */
-                                /* callback_t *callback; */
-
-                                /* /\* while ((callback = g_callback_queue_pop())) { *\/ */
-                                /* /\*         callback_count++; *\/ */
-                                /* /\*         printf("%d callbacks left\n", callback_count); *\/ */
-                                /* /\* } *\/ */
-                                /* clientNode->callback->data = (void *)clientNode; */
-
-                                /* pthread_mutex_lock(&g_callback_mutex); */
-                                /* g_callback_queue_push(clientNode->callback); */
-                                /* pthread_mutex_unlock(&g_callback_mutex); */
-                                /* pthread_cond_signal(&g_callback_cond); */
-
                                 break;
                         case kMIDITick:
                                 transport->tick_count++;
-                                /* printf("C: tick_count %d\n", transport->tick_count); */
+                                printf("C: tick_count %d\n", transport->tick_count);
 
                                 pthread_mutex_lock(&g_callback_mutex);
                                 clientNode->callback->data = (void *)clientNode;
@@ -236,10 +224,11 @@ static void MidiReadProc(const MIDIPacketList *pktlist, void *refCon, void *conn
 
                                 break;
                         case kMIDISongPositionPointer:
-                                transport->tick_count = calculate_current_tick(packet->data[i+1], packet->data[i+2]);
+                                last_midi_beat = calculate_current_tick(packet->data[i+1], packet->data[i+2]);
+                                /* packet = MIDIPacketNext(packet); */
                                 break;
-                        /* default: */
-                        /*         printf("DEFAULT packet : %04x\n", packet->data[i]); */
+                        default:
+                                printf("DEFAULT packet : %04x\n", packet->data[i]);
                         }
 
 
@@ -444,6 +433,7 @@ VALUE client_init(VALUE self, VALUE name)
         rb_funcall(cb_thread, rb_intern("abort_on_exception="), 1, Qtrue);
         rb_iv_set(self, "@cb_thread", cb_thread);
 
+        rb_iv_set(self, "@pool", rb_funcall(rb_cCachedThreadPool, new_intern, 0, Qnil));
         return self;
 }
 

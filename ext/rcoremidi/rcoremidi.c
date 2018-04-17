@@ -1,5 +1,6 @@
 #include "rcoremidi.h"
 
+VALUE rb_cCachedThreadPool;
 VALUE rb_mRCOREMIDI;
 VALUE rb_cMIDIObject;
 VALUE rb_cDevice;
@@ -130,5 +131,13 @@ Init_rcoremidi()
         rb_define_method(rb_cClient, "send_packets", send_packets, 2);
         rb_define_attr(rb_cClient, "name", 1, 1);
         rb_define_attr(rb_cClient, "is_connected", 1, 1);
+        rb_define_attr(rb_cClient, "midi_in", 1, 1);
+        rb_define_attr(rb_cClient, "midi_out", 1, 1);
 
+        rb_require("concurrent");
+
+        /* TODO: fix as per the last comment here: https://stackoverflow.com/questions/6442920/how-do-i-extend-my-ruby-class-with-a-c-extension  */
+
+        VALUE rb_cConcurrent = rb_const_get(rb_cObject, rb_intern("Concurrent"));
+        rb_cCachedThreadPool = rb_const_get(rb_cConcurrent, rb_intern("CachedThreadPool"));
 }

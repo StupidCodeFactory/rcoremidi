@@ -1,5 +1,6 @@
 require 'securerandom'
 require 'rcoremidi.bundle'
+require 'rcoremidi/app_pathname'
 require 'rcoremidi/device'
 require 'rcoremidi/entity'
 require 'rcoremidi/source'

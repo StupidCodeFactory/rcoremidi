@@ -154,7 +154,6 @@ module RCoreMidi
     end
 
     def midi_in
-      pp connection
       @midi_in ||= MIDIObject.find_by_unique_id(connection.last['midi_in'])
     end
 

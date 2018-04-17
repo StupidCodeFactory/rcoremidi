@@ -23,6 +23,7 @@ the osx CoreMidi Framework}
 
   s.add_dependency 'thor'
   s.add_dependency 'listen'
+  s.add_dependency 'concurrent-ruby'
   s.add_development_dependency 'rdoc'
   s.add_development_dependency 'rspec'
   s.add_development_dependency 'rspec-its'
