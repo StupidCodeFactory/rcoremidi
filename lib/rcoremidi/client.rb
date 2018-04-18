@@ -3,10 +3,10 @@
 module RCoreMidi
   class Client # :nodoc:
 
-    def on_tick(midi_beat_clock)
+    def on_tick(m)
       # return unless bar_start?(midi_beat_clock)
-      to_send = live.beats_for(midi_beat_clock)
-      # ap [midi_beat_clock, to_send]
+      to_send = live.beats_for(m)
+      ap "m: #{m}"
       send_packets(midi_out, to_send)
     end
 

@@ -10,8 +10,6 @@
 #include "client.h"
 #include "midi_object.h"
 
-
-
 extern VALUE rb_cCachedThreadPool;
 
 

@@ -21,7 +21,6 @@ ID empty_intern;
 ID lock_intern;
 ID length_intern;
 ID pack_intern;
-ID core_midi_cb_thread_intern;
 ID on_intern;
 ID off_intern;
 ID on_timestamp_intern;
@@ -70,7 +69,6 @@ Init_rcoremidi()
         devices_intern             = rb_intern("@@devices");
         empty_intern               = rb_intern("empty?");
         length_intern              = rb_intern("length");
-        core_midi_cb_thread_intern = rb_intern("@@core_midi_cb_thread");
         on_intern                  = rb_intern("on");
         off_intern                 = rb_intern("off");
         on_timestamp_intern        = rb_intern("on_timestamp");

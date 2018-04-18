@@ -51,26 +51,10 @@ static void stop_waiting_for_callback_signal(void *w)
         pthread_mutex_unlock(&g_callback_mutex);
 }
 
-static VALUE handle_callback(VALUE block_arg, VALUE data, int argc, VALUE* argv) {
-
-        printf("Handle callback: args: %d\n", argc);
-        /* callback_t *cb = (callback_t*)callback; */
-        /* RCoremidiNode *clientNode = (RCoremidiNode *)cb->data; */
-
-        /* rb_funcall(clientNode->rb_client_obj, rb_intern("on_tick"), 1, UINT2NUM(clientNode->transport->tick_count)); */
-
-        /* pthread_mutex_lock(&cb->mutex); */
-        /* pthread_cond_signal(&g_callback_cond); */
-        /* pthread_mutex_unlock(&cb->mutex); */
+static VALUE handle_callback(VALUE midi_clock, VALUE client, int argc, VALUE* argv) {
+        rb_funcall(client, rb_intern("on_tick"), 1, midi_clock);
         return Qnil;
 }
-
-/* VALUE my_block(VALUE block_arg, VALUE data, int argc, VALUE* argv) */
-/* { */
-/*   /\* block_arg will be the first yielded value *\/ */
-/*   /\* data will be the last argument you passed to rb_block_call *\/ */
-/*   /\* if multiple values are yielded, use argc/argv to access them *\/ */
-/* } */
 
 static VALUE boot_callback_event_thread(void * data) {
         callback_waiting_t waiting = {
@@ -84,7 +68,9 @@ static VALUE boot_callback_event_thread(void * data) {
                         callback_t *cb = (callback_t*)waiting.callback;
                         RCoremidiNode *clientNode = (RCoremidiNode *)cb->data;
                         VALUE pool = rb_iv_get(clientNode->rb_client_obj, "@pool");
-                        rb_block_call(pool, rb_intern("post"), 0, NULL, handle_callback, Qnil);
+                        VALUE *block_args = &clientNode->rb_client_obj;
+                        VALUE midi_beat = UINT2NUM(clientNode->transport->tick_count);
+                        rb_block_call(pool, rb_intern("post"), 1, &midi_beat, handle_callback, clientNode->rb_client_obj);
                 }
         }
         return Qnil;
@@ -432,7 +418,7 @@ VALUE client_init(VALUE self, VALUE name)
         cb_thread = rb_thread_create(boot_callback_event_thread, NULL);
         rb_funcall(cb_thread, rb_intern("abort_on_exception="), 1, Qtrue);
         rb_iv_set(self, "@cb_thread", cb_thread);
-
+        rb_iv_set(self, "@midi_clock", UINT2NUM(0));
         rb_iv_set(self, "@pool", rb_funcall(rb_cCachedThreadPool, new_intern, 0, Qnil));
         return self;
 }
