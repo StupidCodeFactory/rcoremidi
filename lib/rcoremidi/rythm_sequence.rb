@@ -1,24 +1,30 @@
+# frozen_string_literal: true
+
 require 'rcoremidi/probability_generator'
 
 module RCoreMidi
+  class RythmSequence # :nodoc:
 
-  class RythmSequence
-    def initialize(pitch, beat_resolution, probabilities)
-      self.pitch           = pitch
-      self.beat_resolution = beat_resolution
-      self.probabilities   = probabilities
+    PULSE_PER_BAR = 96
+
+    def initialize(pitch, probabilities, rhythm =  probabilities.size)
+      self.pitch         = pitch
+      self.delta         = PULSE_PER_BAR / rhythm
+      self.probabilities = probabilities
     end
 
-    def generate(enable_probability, channel)
+    def generate
       probabilities.map.with_index do |probability, i|
-        next unless probability_generator[enable_probability].play?(probability)
+        next [nil, i] if probability.zero?
+          # probability_generator[enable_probability].play?(probability)
 
-        Note.new(pitch, *duration_calculator.timestamps_for(i), channel)
+        [Note.new(pitch, *duration_calculator.timestamps_for(i), nil), delta * i]
       end
     end
 
     private
-    attr_accessor :pitch, :probabilities, :beat_resolution
+
+    attr_accessor :pitch, :probabilities, :delta
 
     def probability_generator
       @probability_generator ||= {
@@ -31,5 +37,4 @@ module RCoreMidi
       @duration_calculator ||= DurationCalculator.new(RCoreMidi::Application.config.bpm)
     end
   end
-
 end

@@ -14,7 +14,6 @@ module RCoreMidi
       end
 
       klass.define_singleton_method :register do |*args, &block|
-        # return self[args.first].load && self[args.first] if self[args.first]
         klass.instance_variable_get(:@registry)[args.first] ||= new(*args, &block)
         klass.instance_variable_get(:@registry)[args.first].load(&block)
       end

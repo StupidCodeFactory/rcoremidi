@@ -1,6 +1,6 @@
 #include <stdio.h>
-#include <ruby.h>
-#include <ruby/thread.h>
+#include "ruby.h"
+#include "ruby/thread.h"
 #include <Carbon/carbon.h>
 #include <CoreAudio/CoreAudio.h>
 #include <CoreMIDI/MIDIServices.h>
@@ -9,6 +9,9 @@
 #include <stdbool.h>
 #include "client.h"
 #include "midi_object.h"
+
+extern VALUE rb_cCachedThreadPool;
+
 
 
 extern VALUE rb_cConectionManager;
@@ -35,18 +38,18 @@ extern const rb_data_type_t midi_endpoint_data_t;
 extern const rb_data_type_t midi_object_data_t;
 
 typedef struct callback_t {
-pthread_mutex_t mutex;
-pthread_cond_t  cond;
+        pthread_mutex_t mutex;
+        pthread_cond_t  cond;
 
-struct callback_t *next;
-void       *data;
-bool       handled;
+        struct callback_t *next;
+        void       *data;
 } callback_t;
 
 extern pthread_mutex_t g_callback_mutex;
 extern pthread_cond_t  g_callback_cond;
 extern callback_t      *g_callback_queue;
 
+// callback queue
 typedef struct callback_waiting_t {
         callback_t *callback;
         bool       abort;

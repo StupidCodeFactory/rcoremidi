@@ -3,13 +3,13 @@ static ByteCount max_packet_list_size = 65536;
 static unsigned long mspm = 60000000;
 static ByteCount note_on_packet_size = 2;
 static VALUE cb_thread;
-
-
+static int midi_beat_start = 0;
+static int last_midi_beat = 0;
 pthread_mutex_t g_callback_mutex  = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t  g_callback_cond   = PTHREAD_COND_INITIALIZER;
 callback_t      *g_callback_queue = NULL;
 
-/* http://www.burgestrand.se//articles/asynchronous-callbacks-in-ruby-c-extensions/ */
+/* http://www.burgestrand.se/articles/asynchronous-callbacks-in-ruby-c-extensions/ */
 void g_callback_queue_push(callback_t *callback)
 {
         callback->next   = g_callback_queue;
@@ -51,6 +51,10 @@ static void stop_waiting_for_callback_signal(void *w)
         pthread_mutex_unlock(&g_callback_mutex);
 }
 
+static VALUE handle_callback(VALUE midi_clock, VALUE client, int argc, VALUE* argv) {
+        rb_funcall(client, rb_intern("on_tick"), 1, midi_clock);
+        return Qnil;
+}
 
 static VALUE boot_callback_event_thread(void * data) {
         callback_waiting_t waiting = {
@@ -61,16 +65,12 @@ static VALUE boot_callback_event_thread(void * data) {
                 rb_thread_call_without_gvl(wait_for_callback_signal, &waiting, stop_waiting_for_callback_signal, &waiting);
                 if (waiting.callback)
                 {
-                        RCoremidiNode *clientNode = (RCoremidiNode *)waiting.callback->data;
-                        pthread_mutex_lock(&waiting.callback->mutex);
-                        rb_funcall(
-                                clientNode->rb_client_obj,
-                                rb_intern("on_tick"),
-                                1,
-                                UINT2NUM(clientNode->transport->bar)
-                                );
-                        /* printf ("TRANSPORT: %d \n", clientNode->transport->tick_count); */
-                        pthread_mutex_unlock(&waiting.callback->mutex);
+                        callback_t *cb = (callback_t*)waiting.callback;
+                        RCoremidiNode *clientNode = (RCoremidiNode *)cb->data;
+                        VALUE pool = rb_iv_get(clientNode->rb_client_obj, "@pool");
+                        VALUE *block_args = &clientNode->rb_client_obj;
+                        VALUE midi_beat = UINT2NUM(clientNode->transport->tick_count);
+                        rb_block_call(pool, rb_intern("post"), 1, &midi_beat, handle_callback, clientNode->rb_client_obj);
                 }
         }
         return Qnil;
@@ -82,8 +82,6 @@ static void midi_node_free(void *ptr)
         RCoremidiNode *tmp = ptr;
         if(tmp) {
                 // May be (also) use MIDICLientDispose() from OSX API?
-                // Anyway is this usefull or should i just need to
-                // free the struct RCoremidiNode. Any just to make sure i free all
                 free(tmp->client);
                 free(tmp->transport);
                 free(tmp->name);
@@ -115,10 +113,7 @@ RCoremidiNode * client_get_data(VALUE self) {
 
 static RCoreMidiTransport * reset_transport(RCoreMidiTransport * transport) {
         transport->tick_count = 0;
-        transport->bar        = 1;
-        transport->quarter    = 0;
-        transport->eigth      = 0;
-        transport->sixteinth  = 0;
+        transport->state      = kMIDIStop;
         return transport;
 }
 
@@ -136,7 +131,6 @@ VALUE client_alloc(VALUE klass)
         clientNode->name          = (char *)malloc(strlen("name"));
         clientNode->transport     = transport_alloc();
         clientNode->in            = malloc(sizeof(MIDIPortRef));
-        clientNode->out           = malloc(sizeof(MIDIPortRef));
         clientNode->out           = malloc(sizeof(MIDIPortRef));
         clientNode->callback      = malloc(sizeof(callback_t));
         pthread_mutex_init(&clientNode->callback->mutex, NULL);
@@ -175,10 +169,12 @@ static void notifyProc(const MIDINotification *notification, void *refCon)
         }
 }
 
+static int calculate_current_tick(lsb, msb) {
+        int midi_beat_start = (msb << 7) | lsb;
+        return midi_beat_start * 6;
+}
 
 static void MidiReadProc(const MIDIPacketList *pktlist, void *refCon, void *connRefCon) {
-
-        pthread_mutex_lock(&g_callback_mutex);
         MIDIPacket *packet = (MIDIPacket *)pktlist->packet;
         unsigned int j;
         int i;
@@ -192,45 +188,33 @@ static void MidiReadProc(const MIDIPacketList *pktlist, void *refCon, void *conn
 
                         switch(packet->data[i]) {
                         case kMIDIStart:
-                                /* static MIDITimeStamp timestamp = 0; */
+                                transport->state = kMIDIStart;
                                 transport->current_timestamp = mach_absolute_time();
-                                clientNode->callback->data = (void *)clientNode;
-
-
-                                g_callback_queue_push(clientNode->callback);
-
+                                transport->tick_count = -1;
+                                break;
+                        case kMIDIContinue:
+                                transport->tick_count = last_midi_beat - 1;
                                 break;
                         case kMIDIStop:
-                                printf("Stoping Client...\n");
+                                transport->state = kMIDIStop;
                                 break;
                         case kMIDITick:
                                 transport->tick_count++;
-                                printf("%d\n", transport->tick_count);
-                                if ((transport->tick_count % 96) == 0) {
-                                        clientNode->callback->data = (void *)clientNode;
+                                printf("C: tick_count %d\n", transport->tick_count);
 
-                                        g_callback_queue_push(clientNode->callback);
-
-                                        transport->bar++;
-                                }
-                                // quarter
-                                if ((transport->tick_count % 24) == 0) {
-                                        transport->quarter++;
-                                }
-                                // eigth
-                                if ((transport->tick_count % 12) == 0) {
-                                        transport->eigth++;
-                                }
-                                // sixteinth
-                                if ((transport->tick_count % 8) == 0) {
-                                        transport->sixteinth++;
-                                }
-
+                                pthread_mutex_lock(&g_callback_mutex);
+                                clientNode->callback->data = (void *)clientNode;
+                                g_callback_queue_push(clientNode->callback);
+                                pthread_mutex_unlock(&g_callback_mutex);
+                                pthread_cond_signal(&g_callback_cond);
 
                                 break;
                         case kMIDISongPositionPointer:
-                                reset_transport(transport);
+                                last_midi_beat = calculate_current_tick(packet->data[i+1], packet->data[i+2]);
+                                /* packet = MIDIPacketNext(packet); */
                                 break;
+                        default:
+                                printf("DEFAULT packet : %04x\n", packet->data[i]);
                         }
 
 
@@ -245,8 +229,6 @@ static void MidiReadProc(const MIDIPacketList *pktlist, void *refCon, void *conn
 
                 packet = MIDIPacketNext(packet);
         }
-        pthread_mutex_unlock(&g_callback_mutex);
-        pthread_cond_signal(&g_callback_cond);
 }
 
 VALUE connect_to(VALUE self, VALUE source)
@@ -428,6 +410,7 @@ VALUE client_init(VALUE self, VALUE name)
         }
 
         rb_iv_set(self, "@name", name);
+        rb_iv_set(self, "@started", Qfalse);
 
 
         clientNode->rb_client_obj = self;
@@ -435,7 +418,8 @@ VALUE client_init(VALUE self, VALUE name)
         cb_thread = rb_thread_create(boot_callback_event_thread, NULL);
         rb_funcall(cb_thread, rb_intern("abort_on_exception="), 1, Qtrue);
         rb_iv_set(self, "@cb_thread", cb_thread);
-
+        rb_iv_set(self, "@midi_clock", UINT2NUM(0));
+        rb_iv_set(self, "@pool", rb_funcall(rb_cCachedThreadPool, new_intern, 0, Qnil));
         return self;
 }
 
