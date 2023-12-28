@@ -1,15 +1,15 @@
-#include <stdio.h>
-#include <ruby.h>
-#include <ruby/thread.h>
 #include <Carbon/carbon.h>
 #include <CoreAudio/CoreAudio.h>
 #include <CoreMIDI/MIDIServices.h>
 #include <mach/mach_time.h>
 #include <pthread.h>
+#include <ruby.h>
+#include <ruby/thread.h>
 #include <stdbool.h>
+#include <stdio.h>
+
 #include "client.h"
 #include "midi_object.h"
-
 
 extern VALUE rb_cConectionManager;
 extern VALUE rb_cDevice;
@@ -35,64 +35,58 @@ extern const rb_data_type_t midi_endpoint_data_t;
 extern const rb_data_type_t midi_object_data_t;
 
 typedef struct callback_t {
-pthread_mutex_t mutex;
-pthread_cond_t  cond;
+  pthread_mutex_t mutex;
+  pthread_cond_t cond;
 
-struct callback_t *next;
-void       *data;
-bool       handled;
+  struct callback_t *next;
+  void *data;
+  bool handled;
 } callback_t;
 
 extern pthread_mutex_t g_callback_mutex;
-extern pthread_cond_t  g_callback_cond;
-extern callback_t      *g_callback_queue;
+extern pthread_cond_t g_callback_cond;
+extern callback_t *g_callback_queue;
 
 typedef struct callback_waiting_t {
-        callback_t *callback;
-        bool       abort;
+  callback_t *callback;
+  bool abort;
 } callback_waiting_t;
 
 typedef struct midi_send_params_t {
-        MIDIPortRef     *out;
-        MIDIEndpointRef *midi_destination;
-        Byte            *data;
-        ByteCount       data_size;
+  MIDIPortRef *out;
+  MIDIEndpointRef *midi_destination;
+  Byte *data;
+  ByteCount data_size;
 
 } midi_send_params_t;
 
-typedef struct RCoremidiNode
-{
-        MIDIClientRef      *client;
-        char               *name;
-        MIDIPortRef        *in;
-        MIDIPortRef        *out;
-        RCoreMidiTransport *transport;
-        VALUE              rb_client_obj;
-        callback_t         *callback;
+typedef struct RCoremidiNode {
+  MIDIClientRef *client;
+  char *name;
+  MIDIPortRef *in;
+  MIDIPortRef *out;
+  RCoreMidiTransport *transport;
+  VALUE rb_client_obj;
+  callback_t *callback;
 } RCoremidiNode;
 
 typedef enum MidiStatus MidiStatus;
-enum MidiStatus
-{
-        kMIDISongPositionPointer = 0xF2,
-        kMIDITick                = 0xF8,
-        kMIDIStart               = 0xFA,
-        kMIDIContinue            = 0xFB,
-        kMIDIStop                = 0xFC
+enum MidiStatus {
+  kMIDISongPositionPointer = 0xF2,
+  kMIDITick = 0xF8,
+  kMIDIStart = 0xFA,
+  kMIDIContinue = 0xFB,
+  kMIDIStop = 0xFC
 };
 
 typedef enum MidiState MidiState;
-enum MidiState
-{
-        kMIDIStarted = 0,
-        kMIDIStoped  = 1
-};
+enum MidiState { kMIDIStarted = 0, kMIDIStoped = 1 };
 
-void   no_err(const OSStatus status, const char *error_message);
-void   midi_endpoint_free(void *ptr);
+void no_err(const OSStatus status, const char *error_message);
+void midi_endpoint_free(void *ptr);
 size_t midi_endpoint_memsize(const void *ptr);
 
 void g_callback_queue_push(callback_t *callback);
-RCoremidiNode * client_get_data(VALUE self);
+RCoremidiNode *client_get_data(VALUE self);
 
 VALUE rdebug(VALUE rb_obj);

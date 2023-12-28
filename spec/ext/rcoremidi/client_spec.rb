@@ -1,17 +1,20 @@
 require 'spec_helper'
 
 module RCoreMidi
-  RSpec.xdescribe 'CoreMIDI driver' do
+  RSpec.describe 'CoreMIDI driver' do
     describe Client do
       let(:destination) { Device.all.last.entities.first.endpoints.detect { |e| e.is_a? Destination } }
       let(:source)      { Device.all.last.entities.first.endpoints.detect { |e| e.is_a? Source } }
-      let(:client)      { Client.new("ruby_client") }
+      let(:client)      { Client.new('ruby_client') }
+
+      before do
+        pp Device.all
+      end
 
       describe '#connect' do
         it 'can connect to a source' do
           expect(client.connect_to(source)).to be true
         end
-
       end
       describe '#send' do
         before do
@@ -22,7 +25,6 @@ module RCoreMidi
           expect { 10.times { client.send(destination, [34, 127]) } }.to_not raise_error
         end
       end
-
     end
   end
 end
