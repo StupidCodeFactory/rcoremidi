@@ -1,5 +1,6 @@
 require 'rcoremidi'
 
 class <%= app_const %> < RCoreMidi::Application
-
+  load_clips!
+  load_instruments!
 end

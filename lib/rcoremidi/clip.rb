@@ -2,19 +2,19 @@ require 'observer'
 require 'rcoremidi/notifier'
 
 module RCoreMidi
-
   class Clip
-    include RCoreMidi::Registrable, Observable
+    include Observable
+    include RCoreMidi::Registrable
 
     attr_reader :rythm_sequences, :name, :notifier
 
-    def initialize(name, &block)
-      self.name      = name
+    def initialize(name)
+      self.name            = name
       self.rythm_sequences = []
     end
 
     def note(pitch, beat_resolution, probabilities)
-      self.rythm_sequences << RythmSequence.new(pitch, beat_resolution, probabilities)
+      rythm_sequences << RythmSequence.new(pitch, beat_resolution, probabilities)
     end
 
     def load(&block)
@@ -25,12 +25,12 @@ module RCoreMidi
     end
 
     private
+
     attr_accessor :generator, :block
     attr_writer :rythm_sequences, :name, :notifier
 
     def log(msg)
       RCoreMidi::Application.config.logger.info msg
     end
-
   end
 end

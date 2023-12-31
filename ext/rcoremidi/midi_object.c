@@ -117,7 +117,7 @@ static VALUE add_source_to_entity(VALUE entity, VALUE endpoints,
 static void assign_entity_properties(VALUE entity, MIDIEntityRef *midi_object) {
   CFPropertyListRef midi_properties;
   MIDIObjectGetProperties(*midi_object, &midi_properties, true);
-  CFShow(midi_properties);
+
   CFStringRef cf_name =
       CFDictionaryGetValue(midi_properties, kMIDIPropertyName);
   CFNumberRef uniqueID =
@@ -134,7 +134,7 @@ static void assign_entity_properties(VALUE entity, MIDIEntityRef *midi_object) {
   if (name) {
     rb_iv_set(entity, "@name", rb_str_new2(name));
   } else {
-    fprintf(stderr, "Could not find name for entity %lld\n", uid);
+    fprintf(stderr, "Could not find name for entity %s\n", name);
   }
 
   if (CFNumberGetValue(cf_protocol, CFNumberGetType(cf_protocol), &protocol)) {
@@ -231,6 +231,7 @@ static void log_warning(OSStatus error, const char *customMessage) {
           customMessage);
   CFRelease(errorMessage);
 }
+
 static void assign_device_properties(VALUE device, MIDIDeviceRef *midi_device) {
   OSStatus error;
   CFPropertyListRef midi_properties;
@@ -257,8 +258,6 @@ static void assign_device_properties(VALUE device, MIDIDeviceRef *midi_device) {
   const char *c_str_model = CFStringGetCStringPtr(model, kCFStringEncodingUTF8);
   if (!error && c_str_model) {
     rb_iv_set(device, "@model", rb_str_new2(c_str_model));
-  } else {
-    log_warning(error, "property: model");
   }
 
   error = get_string_properties(midi_device, "name", &name);
@@ -272,9 +271,6 @@ static void assign_device_properties(VALUE device, MIDIDeviceRef *midi_device) {
     if (c_str_name) {
       rb_iv_set(device, "@name", rb_str_new2(c_str_name));
     }
-
-  } else {
-    log_warning(error, "property: name");
   }
 
   error = get_string_properties(midi_device, "driver", &driver);
@@ -282,8 +278,6 @@ static void assign_device_properties(VALUE device, MIDIDeviceRef *midi_device) {
       CFStringGetCStringPtr(driver, kCFStringEncodingUTF8);
   if (!error && c_str_driver) {
     rb_iv_set(device, "@driver", rb_str_new2(c_str_driver));
-  } else {
-    log_warning(error, "property: driver");
   }
 
   error = get_integer_properties(midi_device, "uniqueID", &uniqueID);

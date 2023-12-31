@@ -1,5 +1,6 @@
 module RCoreMidi
   class Device
+    attr_reader :model, :offline, :transmits_mtc, :receives_mtc, :uid
 
     def entities_with_midi_in
       entities.select(&:midi_in?)
@@ -7,14 +8,6 @@ module RCoreMidi
 
     def entities_with_midi_out
       entities.select(&:midi_out?)
-    end
-
-    def as_yaml
-      {
-        'name'         => self.name,
-        'manufacturer' => self.manufacturer,
-        'entities'     => entities.map(&:as_yaml)
-      }
     end
   end
 end

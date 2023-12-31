@@ -1,12 +1,9 @@
 require 'rcoremidi'
 require 'rcoremidi/commands'
 require 'yaml'
-require 'byebug'
 
 module RCoreMidi
-
   class CLI < Thor
-
     include Thor::Actions
 
     DIRS = [
@@ -21,16 +18,16 @@ module RCoreMidi
     APPLICATION = 'application.rb'.freeze
 
     def self.source_root
-      File.expand_path('templates', __FILE__)
+      File.expand_path(__dir__)
     end
 
-    desc 'generate [GENERATOR_TYPE]', "Generate code: clips and instruments"
+    desc 'generate [GENERATOR_TYPE]', 'Generate code: clips and instruments'
     register Commands::Generate, 'generate', 'generate[GENERATOR_TYPE]', 'Generate code: clips and instruments'
 
-    desc 'new [APP_PATH]', "Generate code: clips and instruments"
+    desc 'new [APP_PATH]', 'Generate code: clips and instruments'
     register Commands::New, 'new', 'new[APP_PATH]', 'Generate code: clips and instruments'
 
-    desc 'connections', "Generate a new midi connection"
+    desc 'connections', 'Generate a new midi connection'
     register Commands::Connections, 'connections', 'connections', 'Prints available MIDI connections'
 
     register Commands::Start, 'start', 'start', 'Start Arcx live session'
@@ -41,8 +38,7 @@ module RCoreMidi
     private
 
     def app_const
-      @app_name ||= File.basename(self.destination_root).split(/_|-/).map(&:capitalize).join
+      @app_name ||= File.basename(destination_root).split(/_|-/).map(&:capitalize).join
     end
-
   end
 end

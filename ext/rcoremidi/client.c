@@ -1,67 +1,12 @@
 #include "rcoremidi.h"
+#include <CoreFoundation/CoreFoundation.h>
+#include <MacTypes.h>
+#include <limits.h>
+#include <mach_debug/ipc_info.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
 static ByteCount max_packet_list_size = 65536;
-static VALUE cb_thread;
-
-pthread_mutex_t g_callback_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t g_callback_cond = PTHREAD_COND_INITIALIZER;
-callback_t *g_callback_queue = NULL;
-
-/* http://www.burgestrand.se//articles/asynchronous-callbacks-in-ruby-c-extensions/
- */
-void g_callback_queue_push(callback_t *callback) {
-  callback->next = g_callback_queue;
-  g_callback_queue = callback;
-}
-
-static callback_t *g_callback_queue_pop(void) {
-  callback_t *callback = g_callback_queue;
-  if (callback) {
-    g_callback_queue = callback->next;
-  }
-  return callback;
-}
-
-static void *wait_for_callback_signal(void *w) {
-  callback_waiting_t *waiting = (callback_waiting_t *)w;
-
-  pthread_mutex_lock(&g_callback_mutex);
-
-  while (waiting->abort == false &&
-         (waiting->callback = g_callback_queue_pop()) == NULL) {
-    pthread_cond_wait(&g_callback_cond, &g_callback_mutex);
-  }
-
-  pthread_mutex_unlock(&g_callback_mutex);
-
-  return NULL;
-}
-
-static void stop_waiting_for_callback_signal(void *w) {
-  callback_waiting_t *waiting = (callback_waiting_t *)w;
-
-  pthread_mutex_lock(&g_callback_mutex);
-  waiting->abort = true;
-  pthread_cond_signal(&g_callback_cond);
-  pthread_mutex_unlock(&g_callback_mutex);
-}
-
-static VALUE boot_callback_event_thread(void *data) {
-  callback_waiting_t waiting = {.callback = NULL, .abort = false};
-
-  while (waiting.abort == false) {
-    rb_thread_call_without_gvl(wait_for_callback_signal, &waiting,
-                               stop_waiting_for_callback_signal, &waiting);
-    if (waiting.callback) {
-      RCoremidiNode *clientNode = (RCoremidiNode *)waiting.callback->data;
-      pthread_mutex_lock(&waiting.callback->mutex);
-      rb_funcall(clientNode->rb_client_obj, rb_intern("on_tick"), 1,
-                 UINT2NUM(clientNode->transport->bar));
-      /* printf ("TRANSPORT: %d \n", clientNode->transport->tick_count); */
-      pthread_mutex_unlock(&waiting.callback->mutex);
-    }
-  }
-  return Qnil;
-}
 
 static void midi_node_free(void *ptr) {
   RCoremidiNode *tmp = ptr;
@@ -74,9 +19,6 @@ static void midi_node_free(void *ptr) {
     free(tmp->name);
     free(tmp->in);
     free(tmp->out);
-    pthread_mutex_destroy(&tmp->callback->mutex);
-    pthread_cond_destroy(&tmp->callback->cond);
-    free(tmp->callback);
     free(tmp);
   }
 }
@@ -87,12 +29,6 @@ static size_t midi_node_memsize(const void *ptr) {
 
 const rb_data_type_t midi_node_data_t = {
     "midi_node", {0, midi_node_free, midi_node_memsize}};
-
-RCoremidiNode *client_get_data(VALUE self) {
-  RCoremidiNode *clientNode;
-  TypedData_Get_Struct(self, RCoremidiNode, &midi_node_data_t, clientNode);
-  return clientNode;
-}
 
 static RCoreMidiTransport *reset_transport(RCoreMidiTransport *transport) {
   transport->tick_count = 0;
@@ -108,7 +44,27 @@ static RCoreMidiTransport *transport_alloc() {
   return reset_transport(transport);
 }
 
+static CFDataRef MIDIClockSynchronisation(CFMessagePortRef local, SInt32 msgid,
+                                          CFDataRef data, void *info) {
+
+  RCoreMidiTransport *transport = (RCoreMidiTransport *)CFDataGetBytePtr(data);
+  CFMessagePortContext context;
+  CFMessagePortGetContext(local, &context);
+  RCoremidiNode *clientNode = (RCoremidiNode *)context.info;
+
+  if (transport->tick_count == 0) {
+    rb_funcall(clientNode->rb_client_obj, rb_intern("on_start"), 0);
+  } else {
+    rb_funcall(clientNode->rb_client_obj, rb_intern("on_tick"), 1,
+               UINT2NUM(clientNode->transport->tick_count));
+  }
+
+  CFDataRef newData = CFDataCreate(NULL, 0, 0);
+  return newData;
+}
+
 VALUE client_alloc(VALUE klass) {
+
   RCoremidiNode *clientNode;
   VALUE obj = TypedData_Make_Struct(klass, RCoremidiNode, &midi_node_data_t,
                                     clientNode);
@@ -118,9 +74,6 @@ VALUE client_alloc(VALUE klass) {
   clientNode->in = malloc(sizeof(MIDIPortRef));
   clientNode->out = malloc(sizeof(MIDIPortRef));
   clientNode->out = malloc(sizeof(MIDIPortRef));
-  clientNode->callback = malloc(sizeof(callback_t));
-  pthread_mutex_init(&clientNode->callback->mutex, NULL);
-  pthread_cond_init(&clientNode->callback->cond, NULL);
   return obj;
 }
 
@@ -157,25 +110,74 @@ static void notifyProc(const MIDINotification *notification, void *refCon) {
 static void MidiReadProc(const MIDIPacketList *pktlist, void *refCon,
                          void *connRefCon) {
 
-  pthread_mutex_lock(&g_callback_mutex);
+  CFStringRef midiClientPortName = CFSTR("com.rcoremidi.MainThread");
+  CFMessagePortRef mainThreadPort =
+      CFMessagePortCreateRemote(NULL, midiClientPortName);
+  CFRelease(midiClientPortName);
+
+  CFStringRef MIDIReadProcPortName = CFSTR("com.rcoremidi.CallbackThread");
+  CFMessagePortContext context = {0, NULL, NULL, NULL, NULL};
+  Boolean shouldFreeInfo;
+  CFMessagePortRef MIDIReadProcPort = CFMessagePortCreateLocal(
+      NULL, MIDIReadProcPortName, NULL, &context, &shouldFreeInfo);
+
+  CFRunLoopSourceRef MIDIReadProcRunLoopSource =
+      CFMessagePortCreateRunLoopSource(NULL, MIDIReadProcPort, 0);
+  if (MIDIReadProcRunLoopSource != NULL) {
+    CFRunLoopAddSource(CFRunLoopGetCurrent(), MIDIReadProcRunLoopSource,
+                       kCFRunLoopDefaultMode);
+    CFRelease(MIDIReadProcPort);
+    CFRelease(MIDIReadProcRunLoopSource);
+  } else {
+    fprintf(stderr, "Could not create RunLoopSource for MIDIReadProc\n");
+  }
+  /* printf("MIDIPacketList.numPackets: %d\n", pktlist->numPackets); */
   MIDIPacket *packet = (MIDIPacket *)pktlist->packet;
   unsigned int j;
   int i;
 
   RCoremidiNode *clientNode = (RCoremidiNode *)refCon;
   RCoreMidiTransport *transport = (RCoreMidiTransport *)clientNode->transport;
-
+  unsigned char *bytes;
+  CFDataRef outData;
+  SInt32 response;
   for (j = 0; j < pktlist->numPackets; ++j) {
+    /* printf("packet.length: %d MIDIPacketList.numPackets\n", */
+    /*        pktlist->numPackets); */
 
     for (i = 0; i < packet->length; ++i) {
-
+      /* printf("packet->timestamp: %lld = packet->length: %d - MIDI PACKET " */
+      /*        "DATAL: %#04x - %d\n", */
+      /*        packet->timeStamp, packet->length, packet->data[i], */
+      /*        packet->data[i]); */
       switch (packet->data[i]) {
       case kMIDIStart:
-        /* static MIDITimeStamp timestamp = 0; */
-        transport->current_timestamp = mach_absolute_time();
-        clientNode->callback->data = (void *)clientNode;
+        printf("START: %d\n", transport->tick_count);
+        bytes = malloc(sizeof(RCoreMidiTransport));
+        memcpy(bytes, (const unsigned char *)transport,
+               sizeof(RCoreMidiTransport));
+        outData = CFDataCreate(NULL, bytes, sizeof(RCoreMidiTransport));
 
-        g_callback_queue_push(clientNode->callback);
+        response = CFMessagePortSendRequest(
+            mainThreadPort, transport->tick_count, outData, 0, 0, NULL, NULL);
+        response = CFMessagePortSendRequest(
+            mainThreadPort, transport->tick_count, outData, 0, 0, NULL, NULL);
+        switch (response) {
+        case kCFMessagePortSendTimeout:
+          fprintf(stderr, "Error sending MIDI Beat Clock: timeout\n");
+          break;
+        case kCFMessagePortIsInvalid:
+          fprintf(stderr, "Error sending MIDI Beat Clock: Invalid MachPort\n");
+          break;
+        case kCFMessagePortTransportError:
+          fprintf(stderr, "Error sending MIDI Beat Clock: Transport Error\n");
+          break;
+        case kCFMessagePortBecameInvalidError:
+          fprintf(stderr,
+                  "Error sending MIDI Beat Clock: MachPort became invalid\n");
+          break;
+        }
+        transport->current_timestamp = mach_absolute_time();
 
         break;
       case kMIDIStop:
@@ -183,12 +185,31 @@ static void MidiReadProc(const MIDIPacketList *pktlist, void *refCon,
         break;
       case kMIDITick:
         transport->tick_count++;
-        printf("%d\n", transport->tick_count);
+        bytes = malloc(sizeof(RCoreMidiTransport));
+        memcpy(bytes, (const unsigned char *)transport,
+               sizeof(RCoreMidiTransport));
+        outData = CFDataCreate(NULL, bytes, sizeof(RCoreMidiTransport));
+
+        response = CFMessagePortSendRequest(
+            mainThreadPort, transport->tick_count, outData, 0, 0, NULL, NULL);
+        switch (response) {
+        case kCFMessagePortSendTimeout:
+          fprintf(stderr, "Error sending MIDI Beat Clock: timeout\n");
+          break;
+        case kCFMessagePortIsInvalid:
+          fprintf(stderr, "Error sending MIDI Beat Clock: Invalid MachPort\n");
+          break;
+        case kCFMessagePortTransportError:
+          fprintf(stderr, "Error sending MIDI Beat Clock: Transport Error\n");
+          break;
+        case kCFMessagePortBecameInvalidError:
+          fprintf(stderr,
+                  "Error sending MIDI Beat Clock: MachPort became invalid\n");
+          break;
+        }
+
+        /* printf("%d\n", transport->tick_count); */
         if ((transport->tick_count % 96) == 0) {
-          clientNode->callback->data = (void *)clientNode;
-
-          g_callback_queue_push(clientNode->callback);
-
           transport->bar++;
         }
         // quarter
@@ -211,9 +232,9 @@ static void MidiReadProc(const MIDIPacketList *pktlist, void *refCon,
       }
 
       // rechannelize status bytes
-      if (packet->data[i] >= 0x80 && packet->data[i] < 0xF0) {
-        packet->data[i] = (packet->data[i] & 0xF0) | 0;
-      }
+      /* if (packet->data[i] >= 0x80 && packet->data[i] < 0xF0) { */
+      /*   packet->data[i] = (packet->data[i] & 0xF0) | 0; */
+      /* } */
 
       /* printf("status byte %X data byte 1: %X data byte 2: %X\n",
        * packet->data[i], packet->data[i+1], packet->data[i+2]); */
@@ -221,8 +242,6 @@ static void MidiReadProc(const MIDIPacketList *pktlist, void *refCon,
 
     packet = MIDIPacketNext(packet);
   }
-  pthread_mutex_unlock(&g_callback_mutex);
-  pthread_cond_signal(&g_callback_cond);
 }
 
 VALUE connect_to(VALUE self, VALUE source) {
@@ -240,7 +259,6 @@ VALUE connect_to(VALUE self, VALUE source) {
          "Could not connect ouyput port tout source");
 
   rb_iv_set(self, "@source", source);
-  rb_iv_set(self, "@is_connected", Qtrue);
   return Qtrue;
 }
 
@@ -267,16 +285,18 @@ static void *midi_send_no_gvl(void *data) {
 }
 
 VALUE x_send(VALUE self, VALUE destination, VALUE midi_stream) {
+
   midi_send_params_t *midi_send_params = malloc(sizeof(midi_send_params_t));
   midi_send_params->data_size =
       NUM2ULONG(rb_funcall(midi_stream, length_intern, 0));
+  printf("BYTES COUNT: %ld\n", midi_send_params->data_size);
   unsigned long i;
   Byte *midi_data = malloc(midi_send_params->data_size);
   midi_send_params->data = midi_data;
 
   for (i = 0; i < midi_send_params->data_size; ++i) {
-    *midi_data = (Byte)NUM2UINT(rb_ary_entry(midi_stream, i));
-    printf(" 0x%02X", (Byte)NUM2UINT(rb_ary_entry(midi_stream, i)));
+    *midi_data = (Byte)NUM2CHR(rb_ary_entry(midi_stream, i));
+    printf(" 0x%02X", (Byte)NUM2CHR(rb_ary_entry(midi_stream, i)));
     midi_data++;
   }
 
@@ -294,7 +314,7 @@ VALUE x_send(VALUE self, VALUE destination, VALUE midi_stream) {
   VALUE sent = (VALUE)rb_thread_call_without_gvl(
       midi_send_no_gvl, (void *)midi_send_params, NULL, NULL);
 
-  return sent;
+  return Qtrue;
 }
 
 static Byte *convert_to_bytes(Byte *tail, VALUE midi_bytes) {
@@ -369,8 +389,37 @@ VALUE send_packets(VALUE self, VALUE destination, VALUE packets) {
 }
 
 VALUE client_init(VALUE self, VALUE name) {
+
   RCoremidiNode *clientNode;
   TypedData_Get_Struct(self, RCoremidiNode, &midi_node_data_t, clientNode);
+
+  CFStringRef midiClientPortName;
+  CFMessagePortRef midiClientPort;
+  CFRunLoopSourceRef midiClientSource;
+  CFMessagePortContext context = {0, clientNode, NULL, NULL, NULL};
+  Boolean shouldFreeInfo;
+
+  midiClientPortName = CFSTR("com.rcoremidi.MainThread");
+  midiClientPort = CFMessagePortCreateLocal(NULL, midiClientPortName,
+                                            &MIDIClockSynchronisation, &context,
+                                            &shouldFreeInfo);
+  if (midiClientPort != NULL) {
+    midiClientSource =
+        CFMessagePortCreateRunLoopSource(NULL, midiClientPort, 0);
+    if (midiClientSource != NULL) {
+      CFRunLoopAddSource(CFRunLoopGetCurrent(), midiClientSource,
+                         kCFRunLoopDefaultMode);
+
+      CFRunLoopStop(CFRunLoopGetCurrent());
+      CFRelease(midiClientSource);
+    } else {
+      fprintf(stderr, "No midiClientRunLoopSource was created\n");
+    }
+
+    CFRelease(midiClientPort);
+  } else {
+    fprintf(stderr, "No midiClientMachPort was created\n");
+  }
 
   CFStringRef cName =
       CFStringCreateWithCString(NULL, RSTRING_PTR(name), kCFStringEncodingUTF8);
@@ -402,12 +451,16 @@ VALUE client_init(VALUE self, VALUE name) {
   rb_iv_set(self, "@name", name);
 
   clientNode->rb_client_obj = self;
-
-  cb_thread = rb_thread_create(boot_callback_event_thread, NULL);
-  rb_funcall(cb_thread, rb_intern("abort_on_exception="), 1, Qtrue);
-  rb_iv_set(self, "@cb_thread", cb_thread);
-
   return self;
+}
+
+static void handle_sigint(int sig) { CFRunLoopStop(CFRunLoopGetCurrent()); }
+
+VALUE start_client(VALUE self) {
+  signal(SIGINT, handle_sigint);
+  CFRunLoopRun();
+  printf("stopping client run loop\n");
+  return Qnil;
 }
 
 VALUE dispose_client(VALUE self) {
@@ -449,7 +502,7 @@ VALUE dispose_client(VALUE self) {
   OSStatus error;
   error = MIDIClientDispose((MIDIClientRef)*clientNode->client);
   if (error != noErr) {
-    rb_raise(rb_eRuntimeError, "Could dispose midi client");
+    rb_raise(rb_eRuntimeError, "Could not dispose midi client");
   }
   return self;
 }

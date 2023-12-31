@@ -1,12 +1,12 @@
 require 'rcoremidi/track'
 require 'observer'
-
+require 'debug'
 module RCoreMidi
-
   class Instrument
-
     include RCoreMidi::Registrable
+
     attr_reader :name
+
     def initialize(name, channel, &block)
       self.name    = name
       self.channel = channel
@@ -16,11 +16,10 @@ module RCoreMidi
     def generate_bar(bar)
       track.generate(bar)
     end
+
     def log(msg)
       RCoreMidi::Application.config.logger.info msg
     end
-
-
 
     def play(bar, clip_name, enable_probability = false)
       clp = clip(clip_name)
@@ -39,7 +38,7 @@ module RCoreMidi
       instance_eval(&block)
     end
 
-    def update(clip)
+    def update
       track.reset
       load
     end
@@ -54,10 +53,9 @@ module RCoreMidi
     end
 
     def clip(name)
-      raise ArgumentError.new("Clip #{name} not found.") unless c = Clip[name]
+      raise ArgumentError, "Clip #{name} not found." unless c = Clip[name]
+
       c
     end
-
   end
-
 end

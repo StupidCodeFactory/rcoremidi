@@ -7,8 +7,8 @@ VALUE dispose_client(VALUE self);
 VALUE cClientAlloc(VALUE klass);
 VALUE stop(VALUE stop);
 VALUE client_alloc(VALUE klass);
-VALUE x_send(VALUE self, VALUE destination, VALUE midi_stream);
 VALUE send_packets(VALUE self, VALUE destination, VALUE packets);
+VALUE start_client(VALUE self);
 
 static Byte *convert_to_bytes(Byte *bytes, VALUE midi_bytes);
 
@@ -17,7 +17,7 @@ typedef struct RCoreMidiTransport {
   UInt64 delta;
   unsigned short state;
   float mpt;
-  unsigned int tick_count;
+  UInt64 tick_count;
   unsigned int bar;
   unsigned int quarter;
   unsigned int eigth;

@@ -34,24 +34,6 @@ extern ID off_timestamp_intern;
 extern const rb_data_type_t midi_endpoint_data_t;
 extern const rb_data_type_t midi_object_data_t;
 
-typedef struct callback_t {
-  pthread_mutex_t mutex;
-  pthread_cond_t cond;
-
-  struct callback_t *next;
-  void *data;
-  bool handled;
-} callback_t;
-
-extern pthread_mutex_t g_callback_mutex;
-extern pthread_cond_t g_callback_cond;
-extern callback_t *g_callback_queue;
-
-typedef struct callback_waiting_t {
-  callback_t *callback;
-  bool abort;
-} callback_waiting_t;
-
 typedef struct midi_send_params_t {
   MIDIPortRef *out;
   MIDIEndpointRef *midi_destination;
@@ -67,7 +49,6 @@ typedef struct RCoremidiNode {
   MIDIPortRef *out;
   RCoreMidiTransport *transport;
   VALUE rb_client_obj;
-  callback_t *callback;
 } RCoremidiNode;
 
 typedef enum MidiStatus MidiStatus;
@@ -85,8 +66,3 @@ enum MidiState { kMIDIStarted = 0, kMIDIStoped = 1 };
 void no_err(const OSStatus status, const char *error_message);
 void midi_endpoint_free(void *ptr);
 size_t midi_endpoint_memsize(const void *ptr);
-
-void g_callback_queue_push(callback_t *callback);
-RCoremidiNode *client_get_data(VALUE self);
-
-VALUE rdebug(VALUE rb_obj);

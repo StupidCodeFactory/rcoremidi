@@ -25,11 +25,6 @@ ID off_intern;
 ID on_timestamp_intern;
 ID off_timestamp_intern;
 
-VALUE rdebug(VALUE rb_obj) {
-  rb_funcall(rb_mKernel, (ID)rb_intern("puts"), rb_obj);
-  return Qnil;
-}
-
 void no_err(const OSStatus status, const char *error_message) {
   if (status != noErr) {
     rb_raise(rb_eRuntimeError, error_message, NULL);
@@ -114,8 +109,8 @@ void Init_rcoremidi() {
   rb_define_alloc_func(rb_cClient, client_alloc);
   rb_define_method(rb_cClient, "initialize", client_init, 1);
   rb_define_method(rb_cClient, "connect_to", connect_to, 1);
+  rb_define_method(rb_cClient, "start", start_client, 0);
   rb_define_method(rb_cClient, "dispose", dispose_client, 0);
-  rb_define_method(rb_cClient, "send", x_send, 2);
   rb_define_method(rb_cClient, "send_packets", send_packets, 2);
   rb_define_attr(rb_cClient, "name", 1, 1);
   rb_define_attr(rb_cClient, "is_connected", 1, 1);
