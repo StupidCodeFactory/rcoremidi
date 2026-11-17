@@ -1,0 +1,3 @@
+- name: journey_demo
+  midi_in: -922534654
+  midi_out: 1155151920

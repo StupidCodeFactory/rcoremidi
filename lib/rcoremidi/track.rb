@@ -13,7 +13,7 @@ module RCoreMidi
 
       return [] unless clip
 
-      clip.rythm_sequences_for(bar_offset).flat_map do |rythm_sequence|
+      clip.rythm_sequences_for(bar_offset, bar).flat_map do |rythm_sequence|
         rythm_sequence.generate(enable_probability, channel)
       end
     end

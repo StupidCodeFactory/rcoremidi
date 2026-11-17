@@ -38,10 +38,13 @@ module RCoreMidi
       end
     end
 
-    def rythm_sequences_for(bar_offset)
-      return rythm_sequences if bars.empty?
+    def follow(journey_name, &block)
+      self.followed_journey = [journey_name, block]
+    end
 
-      rythm_sequences + bars[bar_offset % bars.size]
+    def rythm_sequences_for(bar_offset, song_bar = nil)
+      fixed_sequences = bars.empty? ? rythm_sequences : rythm_sequences + bars[bar_offset % bars.size]
+      fixed_sequences + journey_sequences_for(song_bar)
     end
 
     def load(&block)
@@ -53,13 +56,38 @@ module RCoreMidi
 
     private
 
-    attr_accessor :generator, :block, :bars
+    attr_accessor :generator, :block, :bars, :followed_journey
     attr_writer :rythm_sequences, :name, :notifier
 
     def forget_definition
       self.rythm_sequences = []
       self.bars = []
+      self.followed_journey = nil
       @key = nil
+    end
+
+    def journey_sequences_for(song_bar)
+      return [] unless followed_journey && song_bar
+
+      journey_name, block = followed_journey
+      bar = journey(journey_name).bar(song_bar)
+      sequences_played_in(bar.key) { instance_exec(bar.key, bar, &block) }
+    end
+
+    def sequences_played_in(journey_key)
+      fixed_sequences = rythm_sequences
+      fixed_key = @key
+      self.rythm_sequences = []
+      @key = journey_key
+      yield
+      rythm_sequences
+    ensure
+      self.rythm_sequences = fixed_sequences
+      @key = fixed_key
+    end
+
+    def journey(name)
+      Journey[name] || raise(ArgumentError, "Journey #{name} not found.")
     end
 
     def current_key
