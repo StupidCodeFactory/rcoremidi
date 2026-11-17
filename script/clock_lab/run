@@ -1,0 +1,64 @@
+#!/bin/bash
+set -uo pipefail
+
+LAB="$(cd "$(dirname "$0")" && pwd)"
+ROOT="$(cd "$LAB/../.." && pwd)"
+OUT="${CLOCK_LAB_OUT:-$ROOT/tmp/clock_lab}"
+
+build_tools() {
+  mkdir -p "$OUT"
+  for tool in midi_monitor clock_master; do
+    clang -Wall -O2 -o "$OUT/$tool" "$LAB/$tool.c" \
+      -framework CoreMIDI -framework CoreFoundation -framework CoreAudio || exit 1
+  done
+}
+
+start_monitor() {
+  "$OUT/midi_monitor" "Bus 1" "$2" > "$1" &
+  MONITOR_PID=$!
+}
+
+start_app() {
+  (cd "$LAB/clock_check" && RUBYLIB="$ROOT/lib" exec ruby bin/arcx start) > "$OUT/app.log" 2>&1 &
+  APP_PID=$!
+}
+
+stop_lab() {
+  kill -INT "$APP_PID" 2>/dev/null
+  wait "$APP_PID" 2>/dev/null
+  kill "$MONITOR_PID" 2>/dev/null
+  wait "$MONITOR_PID" 2>/dev/null
+}
+
+analyze() {
+  ruby "$LAB/analyze.rb" "$1"
+}
+
+simulated() {
+  build_tools
+  start_monitor "$OUT/simulated.log" 70
+  start_app
+  sleep 4
+  "$OUT/clock_master" "${1:-120}" "${2:-90}"
+  sleep 1
+  stop_lab
+  analyze "$OUT/simulated.log"
+}
+
+daw() {
+  build_tools
+  start_monitor "$OUT/daw.log" 3600
+  start_app
+  trap 'stop_lab; analyze "$OUT/daw.log"; exit 0' INT TERM
+  sleep 3
+  cat "$OUT/app.log"
+  echo "Ready: play in your DAW, then press Ctrl-C to analyse $OUT/daw.log"
+  wait "$APP_PID"
+}
+
+case "${1:-}" in
+  simulated) shift; simulated "$@" ;;
+  daw) daw ;;
+  analyze) analyze "${2:-$OUT/daw.log}" ;;
+  *) echo "Usage: $0 simulated [first_bpm second_bpm] | daw | analyze [log]" >&2; exit 1 ;;
+esac
