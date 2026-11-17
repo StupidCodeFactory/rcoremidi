@@ -24,12 +24,19 @@ How MIDI clock reaches Ruby, and how notes go back out, in the C extension (`ext
               ▼
  RCoreMidi::Client
               │  measures the tick period from the clock host times
-              │  on Start, generates bar 1; on tick 0, sends it anchored
-              │  to that clock
-              │  one beat (24 ticks) before each later bar, generates it
-              │  and schedules it at the bar's projected downbeat
-              │  rescales note offsets from the configured bpm to the
-              │  measured clock tempo
+              │  (forgotten on Stop, so a tempo change while stopped
+              │  is picked up from the first clocks after Continue)
+              │  counts an interval only when it and the previous one
+              │  are at least 2 ms, so the catch-up clocks a DAW sends
+              │  with Continue and the shortened gap after them are
+              │  ignored
+              │  on Start, generates bar 1; one beat (24 ticks) before
+              │  each later bar, generates it
+              │  converts each note's offset into a clock position
+              │  sends each note 3 ticks before its position, timed from
+              │  the latest clock and the measured tick period
+              │  Continue plays the rest of the current bar from the
+              │  resume point, skipping notes already in the past
               ▼
  send_packets(destination, notes, base_host_time)
               │  validates bytes and timestamps, converts MIDI 1.0 bytes
