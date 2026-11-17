@@ -93,9 +93,18 @@ RSpec.describe RCoreMidi::Clip do
       end
     end
 
-    it 'plays one chord of the modulation per bar' do
+    it 'plays one voice-led chord of the modulation per bar' do
       expect((0..3).map { |bar_offset| clip.rythm_sequences_for(bar_offset).map(&:pitches) })
-        .to eq([[%w[C4 E4 G4]], [%w[A4 C5 E5]], [%w[D5 F#5 A5]], [%w[G4 B4 D5]]])
+        .to eq([[%w[C4 E4 G4]], [%w[C4 E4 A4]], [%w[D4 F#4 A4]], [%w[D4 G4 B4]]])
+    end
+
+    it 'plays every chord in root position in its own key without voice leading' do
+      clip = clip_with do
+        key 'C major'
+        modulate to: 'G major', via: :vi, voice_leading: false
+      end
+
+      expect(clip.rythm_sequences_for(2).map(&:pitches)).to eq([%w[D5 F#5 A5]])
     end
 
     it 'starts the modulation again after its last bar' do
@@ -122,7 +131,7 @@ RSpec.describe RCoreMidi::Clip do
         modulate to: 'G major', via: :vi
       end
 
-      expect(clip.rythm_sequences_for(1).map(&:pitches)).to eq([%w[C4], %w[A4 C5 E5]])
+      expect(clip.rythm_sequences_for(1).map(&:pitches)).to eq([%w[C4], %w[C4 E4 A4]])
     end
 
     it 'asks for a key to modulate from' do

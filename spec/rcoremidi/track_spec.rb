@@ -33,7 +33,7 @@ RSpec.describe RCoreMidi::Track do
       end
       subject.play(5, clip, false, 1)
 
-      expect(subject.generate(5).map { |note| note.on[1] }).to eq([69, 72, 76])
+      expect(subject.generate(5).map { |note| note.on[1] }).to eq([60, 64, 69])
     end
 
     it 'plays nothing on a bar without a clip' do

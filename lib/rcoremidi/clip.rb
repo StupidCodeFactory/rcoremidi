@@ -32,8 +32,8 @@ module RCoreMidi
       rythm_sequences << RythmSequence.new(pitch_names(chord), beat_resolution, probabilities)
     end
 
-    def modulate(to:, via: nil, beat_resolution: 16, rhythm: CHORD_ON_FIRST_STEP)
-      self.bars = current_key.modulate_to(to, via: via).map do |chord|
+    def modulate(to:, via: nil, beat_resolution: 16, rhythm: CHORD_ON_FIRST_STEP, voice_leading: true)
+      self.bars = current_key.modulate_to(to, via: via, voice_leading: voice_leading).map do |chord|
         [RythmSequence.new(pitch_names(chord), beat_resolution, rhythm)]
       end
     end
