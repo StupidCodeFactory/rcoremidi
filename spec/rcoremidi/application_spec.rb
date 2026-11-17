@@ -1,44 +1,65 @@
 require 'spec_helper'
+require 'rcoremidi/cli'
+require 'tmpdir'
 
 RSpec.describe RCoreMidi::Application do
-  let(:app_path) { RCoreMidi::AppPathname.new(Dir.pwd) }
-  let(:pid_file) { Pathname.new('tmps/pids/arcx.pid') }
-  let(:log_file) { Pathname.new('tmps/arcx.log') }
-  let(:connections_file) { double(Pathname, read: '') }
-  let(:client) { spy(RCoreMidi::Client) }
-  let(:midi_in) { double(RCoreMidi::Source) }
-  let(:midi_out) { double(RCoreMidi::Destination) }
+  let(:fixtures_root) { RCoreMidi::AppPathname.new(File.join('spec', 'fixtures')) }
 
-  subject { described_class.new(app_path) }
+  describe '.load_clips!' do
+    before { allow(described_class).to receive(:root).and_return(fixtures_root) }
 
-  let(:pid_file_content) { StringIO.new }
-  describe '#run' do
+    it 'registers the clips found in the clips directory' do
+      described_class.load_clips!
+
+      expect(RCoreMidi::Clip[:drum]).to be_an_instance_of(RCoreMidi::Clip)
+    end
+  end
+
+  describe '.load_instruments!' do
     before do
+      allow(described_class).to receive(:root).and_return(fixtures_root)
+      described_class.load_clips!
     end
 
-    it 'writes the pid file' do
-      expect(RCoreMidi::AppPathname).to receive(:new).and_return(app_path)
-      expect(app_path).to receive(:connections_file).and_return(connections_file)
-      expect(YAML).to receive(:load).and_return('midi_in' => 123, 'midi_out' => 456)
+    it 'registers the instruments found in the instruments directory' do
+      described_class.load_instruments!
 
-      expect(app_path).to receive(:clip_files).and_return([])
-      expect(app_path).to receive(:instrument_files).and_return([])
-      expect(app_path).to receive(:pid_file).and_return(pid_file).twice
+      expect(RCoreMidi::Instrument[:drum]).to be_an_instance_of(RCoreMidi::Instrument)
+    end
+  end
 
-      expect(pid_file).to receive(:exist?).and_return true
-      expect(pid_file).to receive(:open).and_yield(pid_file_content)
-      expect(pid_file_content).to receive(:write).with(Process.pid.to_s)
+  describe '#run' do
+    let(:client) { spy(RCoreMidi::Client) }
 
-      expect(RCoreMidi::Client).to receive(:new).and_return(client)
-      expect(client).to receive(:create_live).with(120)
+    around do |example|
+      Dir.mktmpdir do |dir|
+        @app_root = RCoreMidi::AppPathname.new(dir)
+        @app_root.pid_dir.mkpath
+        @app_root.log_file.dirname.mkpath
+        example.run
+      end
+    end
 
-      allow(subject).to receive(:redirect_output)
-      expect(subject).to receive(:midi_in).and_return(midi_in)
-      expect(subject).to receive(:midi_out).and_return(midi_out)
+    before do
+      allow(described_class).to receive(:root).and_return(@app_root)
+      allow(Process).to receive(:daemon)
+      allow(Process).to receive(:setproctitle)
+      allow(subject).to receive_messages(
+        redirect_output: nil, client: client, midi_in: nil, midi_out: nil, trap: nil, wait_for_start: nil
+      )
+      allow(subject.config).to receive(:logger=)
+    end
 
-      expect(Process).to receive(:daemon).and_return(9999)
-      expect(subject).to receive(:wait_for_start)
-      subject.run(true)
+    it 'writes the pid file in daemon mode' do
+      subject.run(daemon_mode: true)
+
+      expect(@app_root.pid_file.read).to eq(Process.pid.to_s)
+    end
+
+    it 'connects the client to the live session' do
+      subject.run(daemon_mode: true)
+
+      expect(client).to have_received(:create_live)
     end
   end
 end

@@ -1,34 +1,25 @@
 require 'spec_helper'
+require 'rcoremidi/cli'
 
 RSpec.describe RCoreMidi::Commands::Connections do
-  let(:app) { 'dummy' }
-  let(:stdout) { StringIO.new }
-  let(:entity) { spy(RCoreMidi::Entity, name: 'Entity Name') }
-  let(:device) {
-    spy(RCoreMidi::Device, name: 'Device Name', entities_with_midi_in: [entity], entities_with_midi_out: [entity], )
-  }
-  before do
-    APP_PATH = File.expand_path(app)
-    RCoreMidi::Commands::New.start [app]
-    allow(entity).to receive(:device).and_return(device)
-    allow(RCoreMidi::Device).to receive(:all).and_return([device])
-
+  let(:source) { double(RCoreMidi::Source, uid: 111) }
+  let(:destination) { double(RCoreMidi::Destination, uid: 222) }
+  let(:entity) { double(RCoreMidi::Entity, name: 'Bus 1', sources: [source], destinations: [destination]) }
+  let(:device) do
+    double(
+      RCoreMidi::Device,
+      name: 'IAC Driver', model: 'IAC', offline: false, transmits_mtc: false, receives_mtc: false,
+      entities_with_midi_in: [entity], entities_with_midi_out: [entity]
+    )
   end
 
-  let(:connection_name) { 'logic_pro' }
+  before { allow(RCoreMidi::Device).to receive(:all).and_return([device]) }
 
-  describe 'when not in application' do
-    it 'raises an error' do
-      expect {
-        described_class.start [connection_name]
-      }.to raise_error(RuntimeError, "Could not find application root")
-    end
+  it 'prints the available MIDI inputs' do
+    expect { described_class.start([]) }.to output(/Available MIDI Inputs:.*IAC Driver\s+Bus 1\s+IAC\s+111\s+online/m).to_stdout
   end
 
-  describe 'when in an application' do
-    it 'prints device inputs' do
-      described_class.start [connection_name]
-    end
-
+  it 'prints the available MIDI outputs' do
+    expect { described_class.start([]) }.to output(/Available MIDI Outputs:.*IAC Driver\s+Bus 1\s+IAC\s+222\s+online/m).to_stdout
   end
 end

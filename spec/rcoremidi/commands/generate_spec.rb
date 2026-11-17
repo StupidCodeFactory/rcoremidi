@@ -1,21 +1,17 @@
 require 'spec_helper'
 require 'rcoremidi/cli'
+require 'tmpdir'
 
 RSpec.describe RCoreMidi::Commands::Generate do
-  include FileUtils::Verbose
-
-  subject { Rcoremidi::CLI.new('spec') }
-
-  let(:argv) { ['generate clip drum'] }
-  let(:generate_command) { spy(described_class) }
-
-  before do
-    expect(described_class).to receive(:new).and_return(generate_command)
+  around do |example|
+    Dir.mktmpdir { |dir| Dir.chdir(dir) { example.run } }
   end
 
-  it 'calls the appropriate subcommand' do
-    described_class.run(argv)
-    expect(generate_command).to have_received(:execute)
-  end
+  describe 'clip' do
+    it 'writes a clip registered under the given name' do
+      expect { RCoreMidi::CLI.start(%w[generate clip drum]) }.to output.to_stdout
 
+      expect(File.read(File.join('clips', 'drum.rb'))).to include('RCoreMidi::Clip.register :drum do')
+    end
+  end
 end

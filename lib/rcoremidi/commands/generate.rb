@@ -19,6 +19,7 @@ They can then be loaded into one or multiple instruments
 LONG_DESC
 
       def clip(name)
+        assign_name!(name)
         template "#{CLI::CLIPS_DIR}/#{CLIP_TEMPLATE}", "#{CLI::CLIPS_DIR}/#{name}.rb"
       end
 

@@ -1,34 +1,23 @@
 require 'spec_helper'
+require 'rcoremidi/cli'
 
 RSpec.describe RCoreMidi::Live do
-  let(:bpm)             { 120 }
-  let(:clip_dir)        { File.join('spec', 'fixtures', 'clips') }
-  let(:instruments_dir) { File.join('spec', 'fixtures', 'instruments') }
+  let(:fixtures_root) { RCoreMidi::AppPathname.new(File.join('spec', 'fixtures')) }
+  let(:duration_calculator) { RCoreMidi::DurationCalculator.new(120) }
 
-  subject { described_class.new(bpm, clip_dir, instruments_dir) }
-
-  describe '#load_clips' do
-    it 'loads clips from file' do
-      subject
-      expect(RCoreMidi::Clip[:drum]).to be_instance_of(RCoreMidi::Clip)
-    end
-  end
-
-  describe '#load_instruments' do
-    it 'loads clips from file' do
-      subject
-      expect(RCoreMidi::Instrument[:drum]).to be_instance_of(RCoreMidi::Instrument)
-    end
+  before do
+    allow(RCoreMidi::Application).to receive(:root).and_return(fixtures_root)
+    RCoreMidi::Application.load_clips!
+    RCoreMidi::Application.load_instruments!
   end
 
   describe '#generate_beats' do
-    let(:duration_calculator) { RCoreMidi::DurationCalculator.new(120) }
-    it "return notes" do
-      expect(subject.generate_beats(1)).to eq([
+    it 'returns the notes every instrument plays on the bar' do
+      expect(subject.generate_beats(bar: 1)).to eq([
         RCoreMidi::Note.new('E5', *duration_calculator.timestamps_for(0)),
         RCoreMidi::Note.new('E5', *duration_calculator.timestamps_for(4)),
         RCoreMidi::Note.new('E5', *duration_calculator.timestamps_for(8)),
-        RCoreMidi::Note.new('E5', *duration_calculator.timestamps_for(12)),
+        RCoreMidi::Note.new('E5', *duration_calculator.timestamps_for(12))
       ])
     end
   end
