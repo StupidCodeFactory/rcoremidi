@@ -38,7 +38,8 @@ module RCoreMidi
       instance_eval(&block)
     end
 
-    def update
+    def update(clip)
+      pp clip
       track.reset
       load
     end

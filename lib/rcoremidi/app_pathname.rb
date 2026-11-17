@@ -1,12 +1,12 @@
+require 'rcoremidi/cli'
 module RCoreMidi
   class AppPathname < Pathname
-
     def valid?
       true
     end
 
     def connections_file
-      config_dir.join(RCoreMidi::Commands::New::CONNECTIONS)
+      config_dir.join(Rcoremidi::Commands::New::CONNECTIONS)
     end
 
     def log_file
@@ -22,7 +22,8 @@ module RCoreMidi
     end
 
     def pid_file
-      pid_dir.join('arcx.pid')
+      pid_dir
+        .join('arcx.pid')
     end
 
     def pid_dir

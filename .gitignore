@@ -9,3 +9,5 @@ TAGS
 dummy
 dummy_app
 testing
+.vscode
+.envrc

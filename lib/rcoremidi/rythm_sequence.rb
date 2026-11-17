@@ -10,7 +10,6 @@ module RCoreMidi
 
     def generate(enable_probability, channel)
       probabilities.map.with_index do |probability, i|
-        pp probability_generator[enable_probability].play?(probability)
         next unless probability_generator[enable_probability].play?(probability)
 
         Note.new(pitch, *duration_calculator.timestamps_for(i), channel)

@@ -44,25 +44,6 @@ static RCoreMidiTransport *transport_alloc() {
   return reset_transport(transport);
 }
 
-static CFDataRef MIDIClockSynchronisation(CFMessagePortRef local, SInt32 msgid,
-                                          CFDataRef data, void *info) {
-
-  RCoreMidiTransport *transport = (RCoreMidiTransport *)CFDataGetBytePtr(data);
-  CFMessagePortContext context;
-  CFMessagePortGetContext(local, &context);
-  RCoremidiNode *clientNode = (RCoremidiNode *)context.info;
-
-  if (transport->tick_count == 0) {
-    rb_funcall(clientNode->rb_client_obj, rb_intern("on_start"), 0);
-  } else {
-    rb_funcall(clientNode->rb_client_obj, rb_intern("on_tick"), 1,
-               UINT2NUM(clientNode->transport->tick_count));
-  }
-
-  CFDataRef newData = CFDataCreate(NULL, 0, 0);
-  return newData;
-}
-
 VALUE client_alloc(VALUE klass) {
 
   RCoremidiNode *clientNode;
@@ -72,7 +53,6 @@ VALUE client_alloc(VALUE klass) {
   clientNode->name = (char *)malloc(strlen("name"));
   clientNode->transport = transport_alloc();
   clientNode->in = malloc(sizeof(MIDIPortRef));
-  clientNode->out = malloc(sizeof(MIDIPortRef));
   clientNode->out = malloc(sizeof(MIDIPortRef));
   return obj;
 }

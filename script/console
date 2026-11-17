@@ -3,7 +3,6 @@ require 'irb'
 # require 'irb/rubinius'
 
 require "bundler/setup"
-require 'byebug'
 require 'ap'
 Bundler.setup :default
 

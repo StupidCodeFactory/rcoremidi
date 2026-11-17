@@ -4,18 +4,19 @@ require 'rcoremidi/client'
 require 'logger'
 require 'listen'
 require 'debug'
+
 module RCoreMidi
   class Configuration
     attr_accessor :bpm, :logger
 
     def initialize
       self.bpm = 120
-      self.logger ||= Logger.new(STDOUT)
+      self.logger ||= Logger.new($stdout)
     end
   end
 
   class Application
-    attr_reader :root, :connections
+    attr_reader :connections
 
     def self.config
       @@config ||= Configuration.new
@@ -41,7 +42,7 @@ module RCoreMidi
       raise 'Could not find application root' unless self.class.root.valid?
     end
 
-    def run(daemon_mode = false)
+    def run(daemon_mode: false)
       if daemon_mode
         Process.daemon
         Process.setproctitle('arcx:live %s' % root)
@@ -54,13 +55,6 @@ module RCoreMidi
 
         config.logger = Logger.new(root.log_file)
 
-        trap 'SIGINT', proc {
-          client.dispose
-          puts 'quiting'
-          exit(0)
-        }
-
-        wait_for_start
       else
         client.midi_in = midi_in
         client.midi_out = midi_out
@@ -68,14 +62,15 @@ module RCoreMidi
 
         config.logger = Logger.new(STDOUT)
 
-        trap 'SIGINT', proc {
-          client.dispose
-          puts 'quiting'
-          exit(0)
-        }
-
-        wait_for_start
       end
+
+      trap 'SIGINT', proc {
+        client.dispose
+        puts 'quiting'
+        exit(0)
+      }
+
+      wait_for_start
     end
 
     def stop
@@ -127,7 +122,7 @@ module RCoreMidi
         check_pid
       else
         root.pid_file.open(::File::CREAT | ::File::EXCL | ::File::WRONLY) do |f|
-          f.write("#{Process.pid}")
+          f.write(Process.pid)
         end
         at_exit do
           root.pid_file.delete if root.pid_file.exist?
@@ -151,7 +146,7 @@ module RCoreMidi
       return :exited unless root.pid_file.exist?
 
       pid = root.pid_file.read.to_i
-      return :dead if pid == 0
+      return :dead if pid.zero?
 
       Process.kill(0, pid)
       :running

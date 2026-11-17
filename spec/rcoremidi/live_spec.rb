@@ -1,7 +1,6 @@
 require 'spec_helper'
 
 RSpec.describe RCoreMidi::Live do
-
   let(:bpm)             { 120 }
   let(:clip_dir)        { File.join('spec', 'fixtures', 'clips') }
   let(:instruments_dir) { File.join('spec', 'fixtures', 'instruments') }

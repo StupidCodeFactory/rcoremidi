@@ -8,13 +8,15 @@ RSpec.describe RCoreMidi::Application do
   let(:client) { spy(RCoreMidi::Client) }
   let(:midi_in) { double(RCoreMidi::Source) }
   let(:midi_out) { double(RCoreMidi::Destination) }
+
   subject { described_class.new(app_path) }
+
   let(:pid_file_content) { StringIO.new }
   describe '#run' do
     before do
     end
 
-    it "writes the pid file" do
+    it 'writes the pid file' do
       expect(RCoreMidi::AppPathname).to receive(:new).and_return(app_path)
       expect(app_path).to receive(:connections_file).and_return(connections_file)
       expect(YAML).to receive(:load).and_return('midi_in' => 123, 'midi_out' => 456)
@@ -38,6 +40,5 @@ RSpec.describe RCoreMidi::Application do
       expect(subject).to receive(:wait_for_start)
       subject.run(true)
     end
-
   end
 end
