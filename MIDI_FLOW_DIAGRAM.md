@@ -6,7 +6,8 @@ How MIDI clock reaches Ruby, and how notes go back out, in the C extension (`ext
  MIDI master (DAW, drum machine)
         │  Start FA · Clock F8 · Stop FC · Continue FB · Song Position F2
         ▼
- CoreMIDI ──► midi_read_proc            CoreMIDI real-time thread
+ CoreMIDI ──► receive block             CoreMIDI real-time thread
+              │  reads Universal MIDI Packets (MIDI 1.0 protocol)
               │  tracks the tick position (Start ⇒ next F8 is tick 0)
               │  copies {kind, tick, packet host time} into a lock-free
               │  ring buffer (1024 events, C11 atomics, no allocation)
@@ -23,15 +24,22 @@ How MIDI clock reaches Ruby, and how notes go back out, in the C extension (`ext
               ▼
  RCoreMidi::Client
               │  measures the tick period from the clock host times
-              │  one beat (24 ticks) before each bar, generates that bar
+              │  on Start, generates bar 1; on tick 0, sends it anchored
+              │  to that clock
+              │  one beat (24 ticks) before each later bar, generates it
               │  and schedules it at the bar's projected downbeat
+              │  rescales note offsets from the configured bpm to the
+              │  measured clock tempo
               ▼
  send_packets(destination, notes, base_host_time)
-              │  validates bytes and timestamps, sorts by time
+              │  validates bytes and timestamps, converts MIDI 1.0 bytes
+              │  to Universal MIDI Packets, sorts by time
               │  (note-off before note-on at the same instant)
               ▼
- CoreMIDI schedules each packet at its host time ──► synth
+ MIDISendEventList: CoreMIDI schedules each event at its host time ──► synth
 ```
+
+The shared CoreMIDI client lives on a dedicated run-loop thread, so setup notifications reach it. `Device.all` rebuilds its list after any setup change.
 
 ## Guarantees
 

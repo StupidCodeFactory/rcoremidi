@@ -25,6 +25,27 @@ void raise_on_midi_error(OSStatus status, const char *message) {
   }
 }
 
+static VALUE host_time_now(VALUE module) {
+  return ULL2NUM(AudioGetCurrentHostTime());
+}
+
+static VALUE host_time_to_nanoseconds(VALUE module, VALUE host_time) {
+  return ULL2NUM(AudioConvertHostTimeToNanos(NUM2ULL(host_time)));
+}
+
+static VALUE host_time_from_nanoseconds(VALUE module, VALUE nanoseconds) {
+  return ULL2NUM(AudioConvertNanosToHostTime(NUM2ULL(nanoseconds)));
+}
+
+static void init_host_time(void) {
+  VALUE host_time = rb_define_module_under(rb_mRCOREMIDI, "HostTime");
+  rb_define_singleton_method(host_time, "now", host_time_now, 0);
+  rb_define_singleton_method(host_time, "to_nanoseconds",
+                             host_time_to_nanoseconds, 1);
+  rb_define_singleton_method(host_time, "from_nanoseconds",
+                             host_time_from_nanoseconds, 1);
+}
+
 static VALUE define_midi_object_class(const char *name) {
   VALUE klass = rb_define_class_under(rb_mRCOREMIDI, name, rb_cObject);
   rb_define_alloc_func(klass, midi_object_alloc);
@@ -45,6 +66,8 @@ void Init_rcoremidi(void) {
   on_continue_intern = rb_intern("on_continue");
 
   rb_mRCOREMIDI = rb_define_module("RCoreMidi");
+  init_host_time();
+  init_universal_packet(rb_mRCOREMIDI);
 
   rb_cMIDIObject =
       rb_define_class_under(rb_mRCOREMIDI, "MIDIObject", rb_cObject);

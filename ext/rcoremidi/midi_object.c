@@ -187,13 +187,21 @@ VALUE find_by_unique_id(VALUE klass, VALUE uid) {
   }
 }
 
+static VALUE build_devices(void) {
+  VALUE devices = rb_ary_new();
+  ItemCount device_count = MIDIGetNumberOfDevices();
+  for (ItemCount i = 0; i < device_count; ++i) {
+    rb_ary_push(devices, build_device(MIDIGetDevice(i)));
+  }
+  return devices;
+}
+
 VALUE find_all(VALUE klass) {
+  shared_midi_client();
   VALUE devices = rb_cvar_get(klass, devices_intern);
-  if (RARRAY_LEN(devices) == 0) {
-    ItemCount device_count = MIDIGetNumberOfDevices();
-    for (ItemCount i = 0; i < device_count; ++i) {
-      rb_ary_push(devices, build_device(MIDIGetDevice(i)));
-    }
+  if (take_midi_setup_change() || RARRAY_LEN(devices) == 0) {
+    devices = build_devices();
+    rb_cvar_set(klass, devices_intern, devices);
   }
   return devices;
 }

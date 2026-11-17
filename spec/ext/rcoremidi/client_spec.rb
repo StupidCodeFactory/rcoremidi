@@ -185,6 +185,34 @@ module RCoreMidi
           expect(runner.join(2)).to be(runner)
         end
       end
+
+      describe '#dispose' do
+        let(:clock_flood) do
+          Array.new(48) { |i| midi_event.new([0xF8], i * one_millisecond, [0xF8], (i * one_millisecond) + 500_000) }
+        end
+
+        def start_listener
+          listener = Client.new('disposed listener')
+          listener.define_singleton_method(:on_start) { |_host_time| nil }
+          listener.define_singleton_method(:on_tick) { |_tick, _host_time| nil }
+          listener.connect_to(source)
+          [listener, Thread.new { listener.start }]
+        end
+
+        it 'stops a running clock and survives clock messages still in flight' do
+          runners = Array.new(20) do
+            listener, runner = start_listener
+            client.send_packets(destination, clock_flood)
+            sleep 0.005
+            listener.dispose
+            runner
+          end
+          GC.start
+          sleep 1.5
+
+          expect(runners.map { |runner| runner.join(2) }).to all(be_a(Thread))
+        end
+      end
     end
   end
 end

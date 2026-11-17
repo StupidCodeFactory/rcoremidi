@@ -35,17 +35,30 @@ See `MIDI_FLOW_DIAGRAM.md`. The CFMessagePort and CFRunLoop hand-off from the 20
 | Safety | Bytes and timestamps not range-checked (-1 became System Reset) | Bytes 0..255, status byte first, timestamps 0..1 hour |
 | Safety | NULL dereference for devices without a `protocol` property; `@receives_notes` uninitialised; "supports MMC" read the wrong key | Fixed |
 | Safety | Objective-C helper returned a pointer into an autoreleased buffer | Removed; pure CoreFoundation conversion |
+| Timing | Note offsets inside a bar came from the configured bpm, so they drifted when the master's tempo differed | `RCoreMidi::Client` measures the tick period from clock timestamps and rescales each bar's offsets to it |
+| Timing | Bar 1 was anchored to the Start message, not to the first clock after it | Bar 1 is generated on Start and sent on the first clock (tick 0), anchored to that clock's timestamp |
+| API | `MIDIInputPortCreate`, `MIDISend` and `MIDIPacketList` are to-be-deprecated | Input uses `MIDIInputPortCreateWithProtocol` with a receive block; output uses `MIDIEventList` and `MIDISendEventList`. MIDI 1.0 bytes are converted to Universal MIDI Packets (`RCoreMidi::UniversalPacket.words_for`), including multi-packet SysEx |
+| Lifetime | Whether `MIDIPortDispose` waits for an in-flight read was undocumented | The clock state lives outside the Ruby object. It is freed one second after the port is disposed, and only once no receive call is in progress |
+| Devices | `Device.all` was cached for the life of the process | The shared MIDI client runs on its own run-loop thread so CoreMIDI can deliver setup notifications. Any setup or property change rebuilds the list on the next call |
 
 ## Verification
 
-- Driver specs (`spec/ext`) cover tick delivery, stop, `Thread#kill`, `Thread#wakeup`, handler errors and restart, GC compaction, validation and device lookups. They passed on 18 seeds. One run failed for every example at process start because `MIDIClientCreate` returned OSStatus -304 (MIDI server unavailable). The same seed passed on 3 reruns.
-- Reproduction scripts for compaction (client moved, still delivered), a trapped USR1 signal (clock kept running), Ctrl-C (`Interrupt` after 0.51 s) and a slow 50 ms handler (82 of 82 events, 0 dropped).
-- Soak test: 40,000 lookups, 10,000 sends of 16 notes and 250 client create/dispose cycles with flat RSS.
+- Ruby 4.0.9: the full suite (96 examples) passes on 6 seeds.
+- Driver specs (`spec/ext`) cover:
+  - tick delivery, stop, `Thread#kill`, `Thread#wakeup`, handler errors and restart, and GC compaction;
+  - validation, the UMP encoding (channel voice, system, SysEx, invalid input) and device lookups;
+  - `Device.all` rebuilding after another process adds a virtual source;
+  - disposing 20 running clients while clock messages are still arriving.
+- One earlier run failed for every example at process start because `MIDIClientCreate` returned OSStatus -304 (MIDI server unavailable). The same seed passed on 3 reruns.
+- Reproduction scripts:
+  - compaction, both while running and before start: the client moved and still delivered;
+  - a trapped USR1 signal: the clock kept running;
+  - Ctrl-C: `Interrupt` raised after 0.51 s;
+  - a slow 50 ms handler: 82 of 82 events delivered, 0 dropped.
+- Soak test: 40,000 lookups, 10,000 sends of 16 notes and 250 client create/dispose cycles, with flat RSS.
 
-## Known limits
+## Remaining notes
 
-- Note offsets inside a bar come from the configured bpm (`DurationCalculator`), not the incoming clock, so they drift if the master's tempo differs from `Application.config.bpm`. Bar downbeats follow the clock.
-- Bar 1 is anchored to the Start message time, not the first clock after it.
-- `MIDIInputPortCreate`, `MIDISend` and `MIDIPacketList` are marked to-be-deprecated in favour of `MIDIEventList` (MIDI 2.0 UMP). They still work without warnings.
-- Whether `MIDIPortDispose` waits for an in-flight read proc is not documented. Ports are disposed before the node is freed, which is the safest order the API allows.
-- `Device.all` is cached for the life of the process and does not see hot-plugged devices.
+- The receive block runs on CoreMIDI's high-priority thread and only writes the ring buffer, so the one-second deferred release covers any in-flight call by a wide margin. A receive call that stays blocked for more than a second keeps postponing the release until it finishes.
+- Before the clock tempo has been measured (fewer than two consecutive ticks), bar 1 uses the configured bpm.
+- After Continue, playback resumes at the next bar boundary; the bar that was interrupted is not replayed.

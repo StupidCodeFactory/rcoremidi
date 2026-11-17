@@ -9,7 +9,9 @@
 #include <stdbool.h>
 
 #include "client.h"
+#include "midi_client.h"
 #include "midi_object.h"
+#include "universal_packet.h"
 
 extern VALUE rb_cDevice;
 extern VALUE rb_cEntity;
