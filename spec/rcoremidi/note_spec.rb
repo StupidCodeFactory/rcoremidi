@@ -6,13 +6,13 @@ module RCoreMidi
 
     describe '#on' do
       it 'returns the status, midi note number and velocity' do
-        expect(note.on).to eq [145, 24, 90]
+        expect(note.on).to eq [145, 48, 90]
       end
     end
 
     describe '#off' do
       it 'returns the status, midi note number and velocity' do
-        expect(note.off).to eq [129, 24, 0]
+        expect(note.off).to eq [129, 48, 0]
       end
     end
   end

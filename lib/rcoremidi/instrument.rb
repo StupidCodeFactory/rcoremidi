@@ -26,9 +26,8 @@ module RCoreMidi
       clp.add_observer(self)
       if bar.is_a? Range
         bar.each do |bar_index|
-          track.play(bar_index, clp, enable_probability)
+          track.play(bar_index, clp, enable_probability, bar_index - bar.min)
         end
-        track.reset_at = bar.max
       else
         track.play(bar, clp, enable_probability)
       end
@@ -38,7 +37,7 @@ module RCoreMidi
       instance_eval(&block)
     end
 
-    def update(clip)
+    def update(_reloaded_clip)
       track.reset
       load
     end

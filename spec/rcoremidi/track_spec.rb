@@ -2,39 +2,20 @@ require 'spec_helper'
 
 RSpec.describe RCoreMidi::Track do
 
-  let(:clip)               do
-    RCoreMidi::Clip.new(:drum) do
-      note 'E5', [1, 0, 0, 0] * 4
-    end
-  end
+  subject { described_class.new(0) }
 
-  let(:bar)                { 1 }
-  let(:enable_probability) { false }
-  let(:clips)              { {} }
+  let(:duration_calculator) { RCoreMidi::DurationCalculator.new(120) }
 
-  describe '#play' do
-
-    it "stores what clip to play for a given bar and configuration" do
-      expect(subject).to receive(:clips).and_return(clips)
-
-      subject.play bar, clip, enable_probability
-
-      expect(clips).to eq(bar => [clip, enable_probability])
-    end
-
+  def clip_with(&definition)
+    RCoreMidi::Clip.new(:clip_name).tap { |clip| clip.load(&definition) }
   end
 
   describe '#generate' do
-
-    let(:duration_calculator) { RCoreMidi::DurationCalculator.new(120) }
-
-    before do
-      subject.play(1, clip, enable_probability)
-    end
-
     context 'with no probability generator disabled' do
       it "generates notes" do
-        expect(subject.generate(1, duration_calculator)).to eq(
+        subject.play(1, clip_with { note 'E5', 16, [1, 0, 0, 0] * 4 }, false)
+
+        expect(subject.generate(1)).to eq(
           [
             RCoreMidi::Note.new('E5', *duration_calculator.timestamps_for(0)),
             RCoreMidi::Note.new('E5', *duration_calculator.timestamps_for(4)),
@@ -44,6 +25,19 @@ RSpec.describe RCoreMidi::Track do
         )
       end
     end
-  end
 
+    it 'plays the bar of a multi-bar clip that matches the bar offset' do
+      clip = clip_with do
+        key 'C major'
+        modulate to: 'G major', via: :vi
+      end
+      subject.play(5, clip, false, 1)
+
+      expect(subject.generate(5).map { |note| note.on[1] }).to eq([69, 72, 76])
+    end
+
+    it 'plays nothing on a bar without a clip' do
+      expect(subject.generate(3)).to be_empty
+    end
+  end
 end

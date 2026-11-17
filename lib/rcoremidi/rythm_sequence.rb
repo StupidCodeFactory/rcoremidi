@@ -2,23 +2,27 @@ require 'rcoremidi/probability_generator'
 
 module RCoreMidi
   class RythmSequence
+    attr_reader :pitches, :probabilities
+
     def initialize(pitch, beat_resolution, probabilities)
-      self.pitch           = pitch
+      self.pitches         = Array(pitch)
       self.beat_resolution = beat_resolution
       self.probabilities   = probabilities
     end
 
     def generate(enable_probability, channel)
-      probabilities.map.with_index do |probability, i|
-        next unless probability_generator[enable_probability].play?(probability)
+      probabilities.each_with_index.flat_map do |probability, step|
+        next [] unless probability_generator[enable_probability].play?(probability)
 
-        Note.new(pitch, *duration_calculator.timestamps_for(i), channel)
+        timestamps = duration_calculator.timestamps_for(step)
+        pitches.map { |pitch| Note.new(pitch, *timestamps, channel) }
       end
     end
 
     private
 
-    attr_accessor :pitch, :probabilities, :beat_resolution
+    attr_writer :pitches, :probabilities
+    attr_accessor :beat_resolution
 
     def probability_generator
       @probability_generator ||= {

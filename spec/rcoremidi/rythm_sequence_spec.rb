@@ -14,6 +14,24 @@ RSpec.describe RCoreMidi::RythmSequence do
 
   subject { described_class.new(pitch, beat_resolution, probabilities) }
 
+  describe '#pitches' do
+    it 'wraps a single pitch' do
+      expect(subject.pitches).to eq(%w[E4])
+    end
+  end
+
+  describe '#generate with several pitches' do
+    let(:notes) { described_class.new(%w[G4 B4 D5], beat_resolution, [1, 0, 1, 0]).generate(false, channel) }
+
+    it 'plays every pitch on each step that plays' do
+      expect(notes.map { |note| note.on[1] }).to eq([67, 71, 74] * 2)
+    end
+
+    it 'starts the pitches of a step together' do
+      expect(notes.map(&:on_timestamp).each_slice(3).map(&:uniq)).to all(have_attributes(size: 1))
+    end
+  end
+
   describe '#generate' do
     let(:random_generator)     { double(RCoreMidi::ProbabilityGenerator) }
     let(:not_random_generator) { double(RCoreMidi::ProbabilityGenerator) }
