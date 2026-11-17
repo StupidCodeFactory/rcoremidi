@@ -1,51 +1,46 @@
 require 'spec_helper'
 
 module RCoreMidi
-  RSpec.xdescribe 'CoreMIDI driver' do
-    subject(:midi_device) { MIDIObject.find_by_unique_id(uid) }
+  RSpec.describe 'CoreMIDI driver' do
+    let(:iac_driver) { Device.all.detect { |device| device.name == 'IAC Driver' } }
+    let(:bus) { iac_driver.entities.detect { |entity| entity.name == 'Bus 1' } }
 
-    describe MIDIObject do
-      describe '.find_by_unique_id' do
-
-        describe 'when getting a device' do
-          let(:uid) { 191445378 }
-
-          its(:class)        { should eq(RCoreMidi::Device)}
-          its(:name)         { should eq('IAC Driver') }
-          its(:driver)       { should eq('com.apple.AppleMIDIIACDriver') }
-          its(:manufacturer) { should eq('Apple Inc.') }
-          its(:uid)          { should eq(191445378) }
-
-          describe 'with entities' do
-            pending 'populates the entites' do
-
-              expect(subject.entities.count).to eq(1)
-            end
-          end
-
+    describe Device do
+      describe '.all' do
+        it 'describes the IAC driver' do
+          expect(iac_driver).to have_attributes(uid: an_instance_of(Integer), manufacturer: 'Apple Inc.', offline: false)
         end
 
-        describe 'when getting a source' do
-          let(:uid) { -1061455043 }
-
-          its(:class)        { should eq(RCoreMidi::Source) }
-          its(:uid)          { should eq(-1061455043) }
+        it 'links entities back to their device' do
+          expect(bus.device).to be(iac_driver)
         end
 
-        describe 'when getting a destination' do
-
-          let(:uid) { 1362942403 }
-
-          its(:class)        { should eq(RCoreMidi::Destination) }
-          its(:uid)          { should eq(1362942403) }
+        it 'lists the bus endpoints' do
+          expect(bus.endpoints).to contain_exactly(an_instance_of(Source), an_instance_of(Destination))
         end
       end
     end
 
-    describe Device do
-      describe '.all' do
-        it 'returns devices' do
-          expect(Device.all).to_not be_empty
+    describe MIDIObject do
+      describe '.find_by_unique_id' do
+        it 'finds a device' do
+          expect(MIDIObject.find_by_unique_id(iac_driver.uid)).to be_a(Device).and have_attributes(name: 'IAC Driver')
+        end
+
+        it 'finds a source' do
+          source = bus.sources.first
+
+          expect(MIDIObject.find_by_unique_id(source.uid)).to be_a(Source).and have_attributes(uid: source.uid)
+        end
+
+        it 'finds a destination' do
+          destination = bus.destinations.first
+
+          expect(MIDIObject.find_by_unique_id(destination.uid)).to be_a(Destination).and have_attributes(uid: destination.uid)
+        end
+
+        it 'raises for an unknown uid' do
+          expect { MIDIObject.find_by_unique_id(0) }.to raise_error(ArgumentError, /not found/)
         end
       end
     end

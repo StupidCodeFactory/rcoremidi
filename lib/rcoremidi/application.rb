@@ -104,8 +104,7 @@ module RCoreMidi
     def wait_for_start
       listeners.start
       config.logger.info 'Arcx live successfully started'
-      pp client.live.generate_beats
-      # client.start
+      client.start
     end
 
     def redirect_output

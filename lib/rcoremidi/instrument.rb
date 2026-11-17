@@ -39,7 +39,6 @@ module RCoreMidi
     end
 
     def update(clip)
-      pp clip
       track.reset
       load
     end

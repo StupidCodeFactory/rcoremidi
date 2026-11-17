@@ -1,488 +1,520 @@
 #include "rcoremidi.h"
-#include <CoreFoundation/CoreFoundation.h>
-#include <MacTypes.h>
-#include <limits.h>
-#include <mach_debug/ipc_info.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-static ByteCount max_packet_list_size = 65536;
+#include <dispatch/dispatch.h>
+#include <mach/mach_time.h>
+#include <stdatomic.h>
+#include <stdlib.h>
+
+enum ClockEventKind {
+  kClockStart = 1,
+  kClockTick,
+  kClockStop,
+  kClockContinue
+};
+
+enum MidiStatus {
+  kMIDISongPositionPointer = 0xF2,
+  kMIDITimingClock = 0xF8,
+  kMIDIStart = 0xFA,
+  kMIDIContinue = 0xFB,
+  kMIDIStop = 0xFC,
+  kMIDIControlChange = 0xB0,
+  kMIDIAllSoundOff = 120,
+  kMIDIAllNotesOff = 123
+};
+
+enum {
+  kClockQueueCapacity = 1024,
+  kMaxMIDIMessageLength = 256,
+  kMIDIChannels = 16
+};
+
+static const ByteCount kPacketListCapacity = 65536;
+static const int64_t kTicksPerSixteenth = 6;
+static const int64_t kClockWaitNanoseconds = 100 * NSEC_PER_MSEC;
+static const long long kMaxScheduleAheadNanoseconds = 3600LL * NSEC_PER_SEC;
+
+typedef struct ClockEvent {
+  int kind;
+  int64_t tick;
+  MIDITimeStamp host_time;
+} ClockEvent;
+
+typedef struct ClockQueue {
+  ClockEvent events[kClockQueueCapacity];
+  _Atomic uint64_t head;
+  _Atomic uint64_t tail;
+  _Atomic uint64_t dropped;
+} ClockQueue;
+
+typedef struct RCoremidiNode {
+  MIDIPortRef in;
+  MIDIPortRef out;
+  bool ports_created;
+  bool disposed;
+  bool running;
+  int64_t tick;
+  atomic_bool listening;
+  atomic_bool stop_requested;
+  MIDIEndpointRef last_destination;
+  dispatch_semaphore_t clock_signal;
+  ClockQueue clock_queue;
+} RCoremidiNode;
+
+enum ReleaseOrder { kReleaseFirst = 0, kAttackAfterRelease = 1 };
+
+typedef struct ScheduledMessage {
+  MIDITimeStamp timestamp;
+  enum ReleaseOrder release_order;
+  long position;
+  ByteCount length;
+  Byte bytes[kMaxMIDIMessageLength];
+} ScheduledMessage;
+
+static MIDIClientRef shared_midi_client;
+static bool shared_midi_client_created;
+
+static bool push_clock_event(ClockQueue *queue, ClockEvent event) {
+  uint64_t tail = atomic_load_explicit(&queue->tail, memory_order_relaxed);
+  uint64_t head = atomic_load_explicit(&queue->head, memory_order_acquire);
+  if (tail - head == kClockQueueCapacity) {
+    atomic_fetch_add_explicit(&queue->dropped, 1, memory_order_relaxed);
+    return false;
+  }
+  queue->events[tail % kClockQueueCapacity] = event;
+  atomic_store_explicit(&queue->tail, tail + 1, memory_order_release);
+  return true;
+}
+
+static bool pop_clock_event(ClockQueue *queue, ClockEvent *event) {
+  uint64_t head = atomic_load_explicit(&queue->head, memory_order_relaxed);
+  uint64_t tail = atomic_load_explicit(&queue->tail, memory_order_acquire);
+  if (head == tail) {
+    return false;
+  }
+  *event = queue->events[head % kClockQueueCapacity];
+  atomic_store_explicit(&queue->head, head + 1, memory_order_release);
+  return true;
+}
+
+static bool clock_queue_empty(ClockQueue *queue) {
+  return atomic_load_explicit(&queue->head, memory_order_relaxed) ==
+         atomic_load_explicit(&queue->tail, memory_order_acquire);
+}
+
+static void discard_clock_events(ClockQueue *queue) {
+  ClockEvent ignored;
+  while (pop_clock_event(queue, &ignored)) {
+  }
+}
+
+static void send_bytes_now(RCoremidiNode *node, MIDIEndpointRef destination,
+                           const Byte *bytes, ByteCount length) {
+  Byte buffer[sizeof(MIDIPacketList) + kMaxMIDIMessageLength];
+  MIDIPacketList *packet_list = (MIDIPacketList *)buffer;
+  MIDIPacket *packet = MIDIPacketListInit(packet_list);
+  if (MIDIPacketListAdd(packet_list, sizeof buffer, packet, 0, length, bytes)) {
+    MIDISend(node->out, destination, packet_list);
+  }
+}
+
+static void silence_last_destination(RCoremidiNode *node) {
+  if (!node->ports_created || node->disposed || !node->last_destination) {
+    return;
+  }
+  MIDIFlushOutput(node->last_destination);
+  Byte messages[kMIDIChannels * 6];
+  for (int channel = 0; channel < kMIDIChannels; ++channel) {
+    Byte *message = &messages[channel * 6];
+    message[0] = kMIDIControlChange | channel;
+    message[1] = kMIDIAllSoundOff;
+    message[2] = 0;
+    message[3] = kMIDIControlChange | channel;
+    message[4] = kMIDIAllNotesOff;
+    message[5] = 0;
+  }
+  send_bytes_now(node, node->last_destination, messages, sizeof messages);
+}
+
+static void dispose_ports(RCoremidiNode *node) {
+  if (!node->ports_created || node->disposed) {
+    return;
+  }
+  atomic_store_explicit(&node->listening, false, memory_order_release);
+  silence_last_destination(node);
+  MIDIPortDispose(node->in);
+  MIDIPortDispose(node->out);
+  node->disposed = true;
+}
 
 static void midi_node_free(void *ptr) {
-  RCoremidiNode *tmp = ptr;
-  if (tmp) {
-    // May be (also) use MIDICLientDispose() from OSX API?
-    // Anyway is this usefull or should i just need to
-    // free the struct RCoremidiNode. Any just to make sure i free all
-    free(tmp->client);
-    free(tmp->transport);
-    free(tmp->name);
-    free(tmp->in);
-    free(tmp->out);
-    free(tmp);
+  RCoremidiNode *node = ptr;
+  dispose_ports(node);
+  if (node->clock_signal) {
+    dispatch_release(node->clock_signal);
   }
+  ruby_xfree(node);
 }
 
 static size_t midi_node_memsize(const void *ptr) {
-  return ptr ? sizeof(RCoremidiNode) : 0;
+  return sizeof(RCoremidiNode);
 }
 
-const rb_data_type_t midi_node_data_t = {
-    "midi_node", {0, midi_node_free, midi_node_memsize}};
+static const rb_data_type_t midi_node_data_t = {
+    "rcoremidi_client",
+    {NULL, midi_node_free, midi_node_memsize},
+    NULL,
+    NULL,
+    RUBY_TYPED_FREE_IMMEDIATELY};
 
-static RCoreMidiTransport *reset_transport(RCoreMidiTransport *transport) {
-  transport->tick_count = 0;
-  transport->bar = 1;
-  transport->quarter = 0;
-  transport->eigth = 0;
-  transport->sixteinth = 0;
-  return transport;
+static RCoremidiNode *client_node(VALUE self) {
+  RCoremidiNode *node;
+  TypedData_Get_Struct(self, RCoremidiNode, &midi_node_data_t, node);
+  return node;
 }
 
-static RCoreMidiTransport *transport_alloc() {
-  RCoreMidiTransport *transport = malloc(sizeof(RCoreMidiTransport));
-  return reset_transport(transport);
+static RCoremidiNode *usable_client_node(VALUE self) {
+  RCoremidiNode *node = client_node(self);
+  if (!node->ports_created || node->disposed) {
+    rb_raise(rb_eRuntimeError, "MIDI client is not available (disposed?)");
+  }
+  return node;
 }
 
 VALUE client_alloc(VALUE klass) {
-
-  RCoremidiNode *clientNode;
-  VALUE obj = TypedData_Make_Struct(klass, RCoremidiNode, &midi_node_data_t,
-                                    clientNode);
-  clientNode->client = malloc(sizeof(MIDIClientRef));
-  clientNode->name = (char *)malloc(strlen("name"));
-  clientNode->transport = transport_alloc();
-  clientNode->in = malloc(sizeof(MIDIPortRef));
-  clientNode->out = malloc(sizeof(MIDIPortRef));
-  return obj;
+  RCoremidiNode *node;
+  VALUE self =
+      TypedData_Make_Struct(klass, RCoremidiNode, &midi_node_data_t, node);
+  node->clock_signal = dispatch_semaphore_create(0);
+  return self;
 }
 
-static void notifyProc(const MIDINotification *notification, void *refCon) {
-  switch (notification->messageID) {
-  case kMIDIMsgSetupChanged:
-    printf("MIDINotifyProc: SET UP HAS CHANGED\n");
-    break;
-  case kMIDIMsgPropertyChanged:
-    printf("MIDINotifyProc: SET UP PROPERTY CHANGED\n");
-    break;
-  case kMIDIMsgIOError:
-    printf("MIDINotifyProc: IO ERROR\n");
-    break;
-  case kMIDIMsgObjectAdded:
-    printf("MIDINotifyProc: OBJECT ADDED\n");
-    break;
-  case kMIDIMsgObjectRemoved:
-    printf("MIDINotifyProc: OBECT REMOVE\n");
-    break;
-  case kMIDIMsgSerialPortOwnerChanged:
-    printf("MIDINotifyProc: SERAIL PORT OWNER CHAGED\n");
-    break;
-  case kMIDIMsgThruConnectionsChanged:
-    printf("MIDINotifyProc: THRU CONNECTION CHANGED\n");
-    break;
+static MIDITimeStamp packet_host_time(const MIDIPacket *packet) {
+  return packet->timeStamp ? packet->timeStamp : mach_absolute_time();
+}
 
-  default:
-    printf("MIDINotifyProc: WHAT THE FUCK\n");
-    break;
+static void enqueue_clock_event(RCoremidiNode *node, int kind,
+                                MIDITimeStamp host_time) {
+  if (!atomic_load_explicit(&node->listening, memory_order_acquire)) {
+    return;
+  }
+  ClockEvent event = {.kind = kind, .tick = node->tick, .host_time = host_time};
+  if (push_clock_event(&node->clock_queue, event)) {
+    dispatch_semaphore_signal(node->clock_signal);
   }
 }
 
-static void MidiReadProc(const MIDIPacketList *pktlist, void *refCon,
-                         void *connRefCon) {
+static int64_t song_position_in_ticks(const MIDIPacket *packet, int index) {
+  int64_t sixteenths =
+      (packet->data[index + 1] & 0x7F) | ((packet->data[index + 2] & 0x7F) << 7);
+  return sixteenths * kTicksPerSixteenth;
+}
 
-  CFStringRef midiClientPortName = CFSTR("com.rcoremidi.MainThread");
-  CFMessagePortRef mainThreadPort =
-      CFMessagePortCreateRemote(NULL, midiClientPortName);
-  CFRelease(midiClientPortName);
-
-  CFStringRef MIDIReadProcPortName = CFSTR("com.rcoremidi.CallbackThread");
-  CFMessagePortContext context = {0, NULL, NULL, NULL, NULL};
-  Boolean shouldFreeInfo;
-  CFMessagePortRef MIDIReadProcPort = CFMessagePortCreateLocal(
-      NULL, MIDIReadProcPortName, NULL, &context, &shouldFreeInfo);
-
-  CFRunLoopSourceRef MIDIReadProcRunLoopSource =
-      CFMessagePortCreateRunLoopSource(NULL, MIDIReadProcPort, 0);
-  if (MIDIReadProcRunLoopSource != NULL) {
-    CFRunLoopAddSource(CFRunLoopGetCurrent(), MIDIReadProcRunLoopSource,
-                       kCFRunLoopDefaultMode);
-    CFRelease(MIDIReadProcPort);
-    CFRelease(MIDIReadProcRunLoopSource);
-  } else {
-    fprintf(stderr, "Could not create RunLoopSource for MIDIReadProc\n");
-  }
-  /* printf("MIDIPacketList.numPackets: %d\n", pktlist->numPackets); */
-  MIDIPacket *packet = (MIDIPacket *)pktlist->packet;
-  unsigned int j;
-  int i;
-
-  RCoremidiNode *clientNode = (RCoremidiNode *)refCon;
-  RCoreMidiTransport *transport = (RCoreMidiTransport *)clientNode->transport;
-  unsigned char *bytes;
-  CFDataRef outData;
-  SInt32 response;
-  for (j = 0; j < pktlist->numPackets; ++j) {
-    /* printf("packet.length: %d MIDIPacketList.numPackets\n", */
-    /*        pktlist->numPackets); */
-
-    for (i = 0; i < packet->length; ++i) {
-      /* printf("packet->timestamp: %lld = packet->length: %d - MIDI PACKET " */
-      /*        "DATAL: %#04x - %d\n", */
-      /*        packet->timeStamp, packet->length, packet->data[i], */
-      /*        packet->data[i]); */
-      switch (packet->data[i]) {
-      case kMIDIStart:
-        printf("START: %d\n", transport->tick_count);
-        bytes = malloc(sizeof(RCoreMidiTransport));
-        memcpy(bytes, (const unsigned char *)transport,
-               sizeof(RCoreMidiTransport));
-        outData = CFDataCreate(NULL, bytes, sizeof(RCoreMidiTransport));
-
-        response = CFMessagePortSendRequest(
-            mainThreadPort, transport->tick_count, outData, 0, 0, NULL, NULL);
-        response = CFMessagePortSendRequest(
-            mainThreadPort, transport->tick_count, outData, 0, 0, NULL, NULL);
-        switch (response) {
-        case kCFMessagePortSendTimeout:
-          fprintf(stderr, "Error sending MIDI Beat Clock: timeout\n");
-          break;
-        case kCFMessagePortIsInvalid:
-          fprintf(stderr, "Error sending MIDI Beat Clock: Invalid MachPort\n");
-          break;
-        case kCFMessagePortTransportError:
-          fprintf(stderr, "Error sending MIDI Beat Clock: Transport Error\n");
-          break;
-        case kCFMessagePortBecameInvalidError:
-          fprintf(stderr,
-                  "Error sending MIDI Beat Clock: MachPort became invalid\n");
-          break;
-        }
-        transport->current_timestamp = mach_absolute_time();
-
-        break;
-      case kMIDIStop:
-        printf("Stoping Client...\n");
-        break;
-      case kMIDITick:
-        transport->tick_count++;
-        bytes = malloc(sizeof(RCoreMidiTransport));
-        memcpy(bytes, (const unsigned char *)transport,
-               sizeof(RCoreMidiTransport));
-        outData = CFDataCreate(NULL, bytes, sizeof(RCoreMidiTransport));
-
-        response = CFMessagePortSendRequest(
-            mainThreadPort, transport->tick_count, outData, 0, 0, NULL, NULL);
-        switch (response) {
-        case kCFMessagePortSendTimeout:
-          fprintf(stderr, "Error sending MIDI Beat Clock: timeout\n");
-          break;
-        case kCFMessagePortIsInvalid:
-          fprintf(stderr, "Error sending MIDI Beat Clock: Invalid MachPort\n");
-          break;
-        case kCFMessagePortTransportError:
-          fprintf(stderr, "Error sending MIDI Beat Clock: Transport Error\n");
-          break;
-        case kCFMessagePortBecameInvalidError:
-          fprintf(stderr,
-                  "Error sending MIDI Beat Clock: MachPort became invalid\n");
-          break;
-        }
-
-        /* printf("%d\n", transport->tick_count); */
-        if ((transport->tick_count % 96) == 0) {
-          transport->bar++;
-        }
-        // quarter
-        if ((transport->tick_count % 24) == 0) {
-          transport->quarter++;
-        }
-        // eigth
-        if ((transport->tick_count % 12) == 0) {
-          transport->eigth++;
-        }
-        // sixteinth
-        if ((transport->tick_count % 8) == 0) {
-          transport->sixteinth++;
-        }
-
-        break;
-      case kMIDISongPositionPointer:
-        reset_transport(transport);
-        break;
-      }
-
-      // rechannelize status bytes
-      /* if (packet->data[i] >= 0x80 && packet->data[i] < 0xF0) { */
-      /*   packet->data[i] = (packet->data[i] & 0xF0) | 0; */
-      /* } */
-
-      /* printf("status byte %X data byte 1: %X data byte 2: %X\n",
-       * packet->data[i], packet->data[i+1], packet->data[i+2]); */
+static int handle_status_byte(RCoremidiNode *node, const MIDIPacket *packet,
+                              int index) {
+  MIDITimeStamp host_time = packet_host_time(packet);
+  switch (packet->data[index]) {
+  case kMIDIStart:
+    node->tick = -1;
+    enqueue_clock_event(node, kClockStart, host_time);
+    return index;
+  case kMIDITimingClock:
+    node->tick++;
+    enqueue_clock_event(node, kClockTick, host_time);
+    return index;
+  case kMIDIContinue:
+    enqueue_clock_event(node, kClockContinue, host_time);
+    return index;
+  case kMIDIStop:
+    enqueue_clock_event(node, kClockStop, host_time);
+    return index;
+  case kMIDISongPositionPointer:
+    if (index + 2 < packet->length) {
+      node->tick = song_position_in_ticks(packet, index) - 1;
+      return index + 2;
     }
+    return index;
+  default:
+    return index;
+  }
+}
 
+static void midi_read_proc(const MIDIPacketList *packet_list, void *read_ref,
+                           void *source_ref) {
+  RCoremidiNode *node = read_ref;
+  const MIDIPacket *packet = packet_list->packet;
+  for (UInt32 p = 0; p < packet_list->numPackets; ++p) {
+    for (int i = 0; i < packet->length; ++i) {
+      i = handle_status_byte(node, packet, i);
+    }
     packet = MIDIPacketNext(packet);
   }
 }
 
+static void wake_clock_waiter(void *ptr) {
+  RCoremidiNode *node = ptr;
+  dispatch_semaphore_signal(node->clock_signal);
+}
+
+static void *wait_for_clock_events(void *ptr) {
+  RCoremidiNode *node = ptr;
+  if (clock_queue_empty(&node->clock_queue) &&
+      !atomic_load(&node->stop_requested)) {
+    dispatch_semaphore_wait(
+        node->clock_signal,
+        dispatch_time(DISPATCH_TIME_NOW, kClockWaitNanoseconds));
+  }
+  return NULL;
+}
+
+static void call_optional_handler(VALUE self, ID handler) {
+  if (rb_respond_to(self, handler)) {
+    rb_funcall(self, handler, 0);
+  }
+}
+
+static void deliver_clock_event(VALUE self, const ClockEvent *event) {
+  VALUE host_time = ULL2NUM(event->host_time);
+  switch (event->kind) {
+  case kClockStart:
+    rb_funcall(self, on_start_intern, 1, host_time);
+    break;
+  case kClockTick:
+    rb_funcall(self, on_tick_intern, 2, LL2NUM(event->tick), host_time);
+    break;
+  case kClockStop:
+    call_optional_handler(self, on_stop_intern);
+    break;
+  case kClockContinue:
+    call_optional_handler(self, on_continue_intern);
+    break;
+  }
+}
+
+static void deliver_clock_events(VALUE self, RCoremidiNode *node) {
+  ClockEvent event;
+  while (!atomic_load(&node->stop_requested) &&
+         pop_clock_event(&node->clock_queue, &event)) {
+    deliver_clock_event(self, &event);
+  }
+}
+
+static VALUE run_clock(VALUE self) {
+  RCoremidiNode *node = client_node(self);
+  while (!atomic_load(&node->stop_requested)) {
+    rb_thread_call_without_gvl2(wait_for_clock_events, node, wake_clock_waiter,
+                                node);
+    deliver_clock_events(self, node);
+    rb_thread_check_ints();
+  }
+  return Qnil;
+}
+
+static VALUE finish_clock(VALUE self) {
+  RCoremidiNode *node = client_node(self);
+  atomic_store_explicit(&node->listening, false, memory_order_release);
+  node->running = false;
+  return Qnil;
+}
+
+VALUE start_client(VALUE self) {
+  RCoremidiNode *node = usable_client_node(self);
+  if (node->running) {
+    rb_raise(rb_eRuntimeError, "MIDI clock already started");
+  }
+  node->running = true;
+  atomic_store(&node->stop_requested, false);
+  discard_clock_events(&node->clock_queue);
+  atomic_store_explicit(&node->listening, true, memory_order_release);
+  return rb_ensure(run_clock, self, finish_clock, self);
+}
+
+VALUE stop_client(VALUE self) {
+  RCoremidiNode *node = client_node(self);
+  atomic_store(&node->stop_requested, true);
+  dispatch_semaphore_signal(node->clock_signal);
+  return Qnil;
+}
+
+VALUE client_running(VALUE self) {
+  RCoremidiNode *node = client_node(self);
+  return atomic_load_explicit(&node->listening, memory_order_acquire) ? Qtrue
+                                                                      : Qfalse;
+}
+
+VALUE silence_client(VALUE self) {
+  silence_last_destination(usable_client_node(self));
+  return Qnil;
+}
+
+VALUE dropped_clock_events(VALUE self) {
+  RCoremidiNode *node = client_node(self);
+  return ULL2NUM(atomic_load(&node->clock_queue.dropped));
+}
+
 VALUE connect_to(VALUE self, VALUE source) {
-  RCoremidiNode *clientNode;
-  TypedData_Get_Struct(self, RCoremidiNode, &midi_node_data_t, clientNode);
-
-  MIDIEndpointRef *midi_source;
-  TypedData_Get_Struct(source, MIDIEndpointRef, &midi_object_data_t,
-                       midi_source);
-
-  CFPropertyListRef midi_properties;
-  MIDIObjectGetProperties(*midi_source, &midi_properties, true);
-
-  no_err(MIDIPortConnectSource(*clientNode->in, *midi_source, NULL),
-         "Could not connect ouyput port tout source");
-
+  RCoremidiNode *node = usable_client_node(self);
+  raise_on_midi_error(
+      MIDIPortConnectSource(node->in, *get_midi_data(source), NULL),
+      "Could not connect the input port to the MIDI source");
   rb_iv_set(self, "@source", source);
   return Qtrue;
 }
 
-static void *midi_send_no_gvl(void *data) {
+static Byte midi_byte(VALUE value) {
+  int byte = NUM2INT(value);
+  if (byte < 0 || byte > 0xFF) {
+    rb_raise(rb_eArgError, "MIDI byte out of range: %d", byte);
+  }
+  return (Byte)byte;
+}
 
-  OSStatus error;
-  midi_send_params_t *params = (midi_send_params_t *)data;
+static ByteCount copy_midi_message(VALUE message, Byte *bytes) {
+  Check_Type(message, T_ARRAY);
+  long length = RARRAY_LEN(message);
+  if (length == 0 || length > kMaxMIDIMessageLength) {
+    rb_raise(rb_eArgError, "MIDI message too long or empty: %ld bytes (max %d)",
+             length, kMaxMIDIMessageLength);
+  }
+  for (long i = 0; i < length; ++i) {
+    bytes[i] = midi_byte(rb_ary_entry(message, i));
+  }
+  if (bytes[0] < 0x80) {
+    rb_raise(rb_eArgError, "MIDI message must start with a status byte");
+  }
+  return (ByteCount)length;
+}
 
-  MIDIPacketList *packet_list = malloc(params->data_size);
+static UInt64 schedule_offset_in_nanoseconds(VALUE nanoseconds) {
+  long long offset = NUM2LL(nanoseconds);
+  if (offset < 0 || offset > kMaxScheduleAheadNanoseconds) {
+    rb_raise(rb_eArgError, "MIDI timestamp out of range: %lld ns", offset);
+  }
+  return (UInt64)offset;
+}
+
+static void schedule_message(ScheduledMessage *scheduled, long position,
+                             enum ReleaseOrder release_order, VALUE message,
+                             VALUE nanoseconds, UInt64 base_host_time) {
+  scheduled->position = position;
+  scheduled->release_order = release_order;
+  scheduled->length = copy_midi_message(message, scheduled->bytes);
+  scheduled->timestamp =
+      base_host_time +
+      AudioConvertNanosToHostTime(schedule_offset_in_nanoseconds(nanoseconds));
+}
+
+static int compare_schedule(const void *a, const void *b) {
+  const ScheduledMessage *left = a;
+  const ScheduledMessage *right = b;
+  if (left->timestamp != right->timestamp) {
+    return left->timestamp < right->timestamp ? -1 : 1;
+  }
+  if (left->release_order != right->release_order) {
+    return left->release_order < right->release_order ? -1 : 1;
+  }
+  return (left->position > right->position) - (left->position < right->position);
+}
+
+static void fill_packet_list(MIDIPacketList *packet_list,
+                             const ScheduledMessage *messages, long count) {
   MIDIPacket *packet = MIDIPacketListInit(packet_list);
-
-  packet = MIDIPacketListAdd(packet_list, 1024, packet, 0, params->data_size,
-                             params->data);
-  if (packet == NULL)
-    printf("drop some midi packet\n");
-
-  error = MIDISend(*params->out, *params->midi_destination, packet_list);
-
-  if (error != noErr) {
-    printf("WARNING: Could not send midi packet\n");
-  }
-
-  return NULL;
-}
-
-VALUE x_send(VALUE self, VALUE destination, VALUE midi_stream) {
-
-  midi_send_params_t *midi_send_params = malloc(sizeof(midi_send_params_t));
-  midi_send_params->data_size =
-      NUM2ULONG(rb_funcall(midi_stream, length_intern, 0));
-  printf("BYTES COUNT: %ld\n", midi_send_params->data_size);
-  unsigned long i;
-  Byte *midi_data = malloc(midi_send_params->data_size);
-  midi_send_params->data = midi_data;
-
-  for (i = 0; i < midi_send_params->data_size; ++i) {
-    *midi_data = (Byte)NUM2CHR(rb_ary_entry(midi_stream, i));
-    printf(" 0x%02X", (Byte)NUM2CHR(rb_ary_entry(midi_stream, i)));
-    midi_data++;
-  }
-
-  RCoremidiNode *clientNode;
-  TypedData_Get_Struct(self, RCoremidiNode, &midi_node_data_t, clientNode);
-
-  midi_send_params->out = clientNode->out;
-
-  MIDIEndpointRef *midi_destination;
-  TypedData_Get_Struct(destination, MIDIObjectRef, &midi_object_data_t,
-                       midi_destination);
-
-  midi_send_params->midi_destination = midi_destination;
-
-  VALUE sent = (VALUE)rb_thread_call_without_gvl(
-      midi_send_no_gvl, (void *)midi_send_params, NULL, NULL);
-
-  return Qtrue;
-}
-
-static Byte *convert_to_bytes(Byte *tail, VALUE midi_bytes) {
-  if (rb_funcall(midi_bytes, empty_intern, 0) == Qtrue) {
-    return tail;
-  }
-
-  *tail = NUM2UINT(rb_ary_shift(midi_bytes));
-  tail++;
-
-  return convert_to_bytes(tail, midi_bytes);
-}
-
-VALUE send_packets(VALUE self, VALUE destination, VALUE packets) {
-  int notes_count, i;
-
-  VALUE note, midi_payload;
-
-  ByteCount midi_payload_size;
-  Byte *bytes, *tail;
-
-  RCoremidiNode *clientNode;
-  MIDIEndpointRef *midi_destination;
-  MIDIPacketList *packet_list;
-  MIDIPacket *midi_packet;
-  MIDITimeStamp timestamp;
-
-  notes_count = NUM2INT(rb_funcall(packets, length_intern, 0));
-
-  packet_list = malloc(65536);
-  midi_packet = MIDIPacketListInit(packet_list);
-  UInt64 t = mach_absolute_time();
-  for (i = 0; i < notes_count; ++i) {
-
-    note = rb_ary_entry(packets, i);
-    midi_payload = rb_funcall(note, on_intern, 0);
-    midi_payload_size = NUM2ULONG(rb_funcall(midi_payload, length_intern, 0));
-
-    bytes = tail = malloc(midi_payload_size);
-    convert_to_bytes(tail, midi_payload);
-    timestamp = t + AudioConvertNanosToHostTime(
-                        NUM2ULL(rb_funcall(note, on_timestamp_intern, 0)));
-    midi_packet =
-        MIDIPacketListAdd(packet_list, max_packet_list_size, midi_packet,
-                          timestamp, midi_payload_size, bytes);
-
-    if (midi_packet == NULL) {
-      rb_raise(rb_eRuntimeError, "no more space in the packet list");
-    }
-
-    midi_payload = rb_funcall(note, off_intern, 0);
-    midi_payload_size = NUM2ULONG(rb_funcall(midi_payload, length_intern, 0));
-
-    tail = bytes;
-    convert_to_bytes(tail, midi_payload);
-    timestamp = t + NUM2ULL(rb_funcall(note, off_timestamp_intern, 0));
-    midi_packet =
-        MIDIPacketListAdd(packet_list, max_packet_list_size, midi_packet,
-                          timestamp, midi_payload_size, bytes);
-
-    if (midi_packet == NULL) {
-      rb_raise(rb_eRuntimeError, "no more space in the packet list");
+  for (long i = 0; i < count; ++i) {
+    packet = MIDIPacketListAdd(packet_list, kPacketListCapacity, packet,
+                               messages[i].timestamp, messages[i].length,
+                               messages[i].bytes);
+    if (!packet) {
+      rb_raise(rb_eArgError, "Too many MIDI events for one packet list");
     }
   }
+}
 
-  TypedData_Get_Struct(self, RCoremidiNode, &midi_node_data_t, clientNode);
-  TypedData_Get_Struct(destination, MIDIObjectRef, &midi_object_data_t,
-                       midi_destination);
+VALUE send_packets(int argc, VALUE *argv, VALUE self) {
+  VALUE destination, events, base_host_time;
+  rb_scan_args(argc, argv, "21", &destination, &events, &base_host_time);
+  RCoremidiNode *node = usable_client_node(self);
+  MIDIEndpointRef endpoint = *get_midi_data(destination);
+  Check_Type(events, T_ARRAY);
+  UInt64 base = NIL_P(base_host_time) ? AudioGetCurrentHostTime()
+                                      : NUM2ULL(base_host_time);
 
-  MIDISend(*clientNode->out, *midi_destination, packet_list);
+  long event_count = RARRAY_LEN(events);
+  long message_count = event_count * 2;
+  VALUE messages_owner, packet_list_owner;
+  ScheduledMessage *messages = ALLOCV_N(ScheduledMessage, messages_owner,
+                                        message_count ? message_count : 1);
+  for (long i = 0; i < event_count; ++i) {
+    VALUE event = rb_ary_entry(events, i);
+    schedule_message(&messages[2 * i], 2 * i, kAttackAfterRelease,
+                     rb_funcall(event, on_intern, 0),
+                     rb_funcall(event, on_timestamp_intern, 0), base);
+    schedule_message(&messages[2 * i + 1], 2 * i + 1, kReleaseFirst,
+                     rb_funcall(event, off_intern, 0),
+                     rb_funcall(event, off_timestamp_intern, 0), base);
+  }
+  mergesort(messages, message_count, sizeof *messages, compare_schedule);
+
+  MIDIPacketList *packet_list = ALLOCV(packet_list_owner, kPacketListCapacity);
+  fill_packet_list(packet_list, messages, message_count);
+  OSStatus status = MIDISend(node->out, endpoint, packet_list);
+  node->last_destination = endpoint;
+
+  ALLOCV_END(packet_list_owner);
+  ALLOCV_END(messages_owner);
+  raise_on_midi_error(status, "Could not send MIDI packets");
   return Qnil;
+}
+
+static CFStringRef cf_string_from_ruby(VALUE string) {
+  CFStringRef cf_string = CFStringCreateWithCString(
+      NULL, StringValueCStr(string), kCFStringEncodingUTF8);
+  if (!cf_string) {
+    rb_raise(rb_eArgError, "MIDI client name must be valid UTF-8");
+  }
+  return cf_string;
+}
+
+static MIDIClientRef midi_client(void) {
+  if (!shared_midi_client_created) {
+    raise_on_midi_error(
+        MIDIClientCreate(CFSTR("rcoremidi"), NULL, NULL, &shared_midi_client),
+        "Could not create the MIDI client");
+    shared_midi_client_created = true;
+  }
+  return shared_midi_client;
+}
+
+static void create_ports(RCoremidiNode *node, MIDIClientRef client,
+                         CFStringRef name) {
+  OSStatus status = MIDIInputPortCreate(client, name, midi_read_proc, node,
+                                        &node->in);
+  if (status == noErr) {
+    status = MIDIOutputPortCreate(client, name, &node->out);
+    if (status != noErr) {
+      MIDIPortDispose(node->in);
+    }
+  }
+  CFRelease(name);
+  raise_on_midi_error(status, "Could not create the MIDI ports");
+  node->ports_created = true;
 }
 
 VALUE client_init(VALUE self, VALUE name) {
-
-  RCoremidiNode *clientNode;
-  TypedData_Get_Struct(self, RCoremidiNode, &midi_node_data_t, clientNode);
-
-  CFStringRef midiClientPortName;
-  CFMessagePortRef midiClientPort;
-  CFRunLoopSourceRef midiClientSource;
-  CFMessagePortContext context = {0, clientNode, NULL, NULL, NULL};
-  Boolean shouldFreeInfo;
-
-  midiClientPortName = CFSTR("com.rcoremidi.MainThread");
-  midiClientPort = CFMessagePortCreateLocal(NULL, midiClientPortName,
-                                            &MIDIClockSynchronisation, &context,
-                                            &shouldFreeInfo);
-  if (midiClientPort != NULL) {
-    midiClientSource =
-        CFMessagePortCreateRunLoopSource(NULL, midiClientPort, 0);
-    if (midiClientSource != NULL) {
-      CFRunLoopAddSource(CFRunLoopGetCurrent(), midiClientSource,
-                         kCFRunLoopDefaultMode);
-
-      CFRunLoopStop(CFRunLoopGetCurrent());
-      CFRelease(midiClientSource);
-    } else {
-      fprintf(stderr, "No midiClientRunLoopSource was created\n");
-    }
-
-    CFRelease(midiClientPort);
-  } else {
-    fprintf(stderr, "No midiClientMachPort was created\n");
+  RCoremidiNode *node = client_node(self);
+  if (node->ports_created) {
+    rb_raise(rb_eRuntimeError, "MIDI client already initialized");
   }
-
-  CFStringRef cName =
-      CFStringCreateWithCString(NULL, RSTRING_PTR(name), kCFStringEncodingUTF8);
-
-  OSStatus created; // Notify refcon!!! I should make
-  // structure to identify midi client, if there are more than one
-  created = MIDIClientCreate(cName, notifyProc, NULL, clientNode->client);
-  if (created != noErr) {
-    rb_raise(rb_eRuntimeError, "Cound not create input port");
+  if (!node->clock_signal) {
+    rb_raise(rb_eNoMemError, "Could not allocate the MIDI clock signal");
   }
-  /*
-   * Then here i should
-   * also make a structy idententifying
-   * the input as there might be more than one
-   */
-  created =
-      MIDIInputPortCreate(*clientNode->client, CFSTR("input"), MidiReadProc,
-                          (void *)clientNode, clientNode->in);
-  if (created != noErr) {
-    rb_raise(rb_eRuntimeError, "Cound not create input port");
-  }
-
-  created = MIDIOutputPortCreate(*clientNode->client, CFSTR("output"),
-                                 clientNode->out);
-  if (created != noErr) {
-    rb_raise(rb_eRuntimeError, "Cound not create output port");
-  }
-
+  MIDIClientRef client = midi_client();
+  create_ports(node, client, cf_string_from_ruby(name));
   rb_iv_set(self, "@name", name);
-
-  clientNode->rb_client_obj = self;
   return self;
 }
 
-static void handle_sigint(int sig) { CFRunLoopStop(CFRunLoopGetCurrent()); }
-
-VALUE start_client(VALUE self) {
-  signal(SIGINT, handle_sigint);
-  CFRunLoopRun();
-  printf("stopping client run loop\n");
-  return Qnil;
-}
-
 VALUE dispose_client(VALUE self) {
-  RCoremidiNode *clientNode;
-  TypedData_Get_Struct(self, RCoremidiNode, &midi_node_data_t, clientNode);
-
-  // // This sits here for debuging purposes
-  // // I should make a macro to use this anywhere :*
-  //         switch (TYPE(client_ref)) {
-  //             case T_FIXNUM:
-  //             printf("%d\n", FIX2INT(client_ref));
-  //             break;
-  //             case T_STRING:
-  //             printf("%s\n", StringValue(client_ref));
-  //             break;
-  //             case T_ARRAY:
-  //             printf("array ?????\n");
-  //             break;
-  //             case T_NIL:
-  //             printf("NIL\n");
-  //             break;
-  //             case T_OBJECT:
-  //             printf("T_OBJECT\n");
-  //             break;
-  //             case T_CLASS:
-  //             printf("T_CLASS\n");
-  //             break;
-  //             case T_DATA:
-  //             printf("T_DATA\n");
-  //             break;
-  //             default:
-  //             rb_raise(rb_eTypeError, "not valid value");
-  //             break;
-  //         }
-  //
-  // // END OF DEBUG
-  //
-
-  OSStatus error;
-  error = MIDIClientDispose((MIDIClientRef)*clientNode->client);
-  if (error != noErr) {
-    rb_raise(rb_eRuntimeError, "Could not dispose midi client");
-  }
+  RCoremidiNode *node = client_node(self);
+  stop_client(self);
+  dispose_ports(node);
   return self;
 }

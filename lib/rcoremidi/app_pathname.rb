@@ -6,7 +6,7 @@ module RCoreMidi
     end
 
     def connections_file
-      config_dir.join(Rcoremidi::Commands::New::CONNECTIONS)
+      config_dir.join(RCoreMidi::Commands::New::CONNECTIONS)
     end
 
     def log_file
