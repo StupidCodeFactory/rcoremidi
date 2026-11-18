@@ -11,12 +11,13 @@ RSpec.describe RCoreMidi::Client do
   let(:start_time) { 1_000_000_000 }
   let(:tick_period) { RCoreMidi::HostTime.from_nanoseconds(configured_tick_nanoseconds) }
   let(:sent) { [] }
+  let(:destinations) { [] }
 
   before do
     client.midi_out = midi_out
     allow(client).to receive(:live).and_return(live)
     allow(live).to receive(:generate_beats).and_return([downbeat, second_beat])
-    allow(client).to receive(:send_packets) { |_destination, notes, host_time| sent << [notes, host_time] }
+    allow(client).to receive(:send_packets) { |destination, notes, host_time| sent << [notes, host_time]; destinations << destination }
   end
 
   after { client.dispose }
@@ -110,6 +111,22 @@ RSpec.describe RCoreMidi::Client do
 
         expect(sent.last).to eq([[second_beat_sent_three_ticks_ahead], host_time_of(21)])
       end
+    end
+  end
+
+  describe 'notes for several outputs' do
+    let(:modular) { instance_double(RCoreMidi::Destination) }
+    let(:modular_downbeat) { note_at(60, on_tick: 0, off_tick: 3).tap { |note| note.destination = modular } }
+
+    before do
+      allow(live).to receive(:generate_beats).and_return([downbeat, modular_downbeat])
+      client.on_start(start_time)
+      play_ticks([0])
+    end
+
+    it 'sends each note to its own output, and the others to midi_out' do
+      expect(destinations).to contain_exactly(midi_out, modular)
+      expect(sent).to contain_exactly([[downbeat], host_time_of(0)], [[have_attributes(on: modular_downbeat.on)], host_time_of(0)])
     end
   end
 

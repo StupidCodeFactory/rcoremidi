@@ -23,10 +23,16 @@ RSpec.describe RCoreMidi::Clip do
     let(:beat_resolution) { 16 }
 
     it 'parses RythmSequence' do
-      expect(RCoreMidi::RythmSequence).to receive(:new).with(pitch, beat_resolution, notes).and_return(rythm_sequence)
+      expect(RCoreMidi::RythmSequence).to receive(:new).with(pitch, beat_resolution, notes, nil).and_return(rythm_sequence)
       subject.note(pitch, beat_resolution, notes)
 
       expect(subject.rythm_sequences).to eq([rythm_sequence])
+    end
+
+    it 'plays each step at the velocity of its lane' do
+      clip = clip_with { note 'C4', 16, [1, 1, 1, 1], velocity: [127, 0, 60, 90] }
+
+      expect(clip.rythm_sequences.first.generate(false, 0).map { |note| note.on[2] }).to eq([127, 0, 60, 90])
     end
 
     it 'plays a scale degree of the clip key' do

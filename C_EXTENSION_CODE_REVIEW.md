@@ -42,13 +42,14 @@ See `MIDI_FLOW_DIAGRAM.md`. The CFMessagePort and CFRunLoop hand-off from the 20
 | Timing | Bar 1 was anchored to the Start message, not to the first clock after it | Bar 1 is generated on Start and its downbeat sent on the first clock (tick 0), anchored to that clock's timestamp |
 | Timing | A Song Position sent while playing, with no Stop first, made the tick jump. Jumping forward generated every bar in between and sent their past notes at once; jumping back left the clock silent until it caught up | A tick that jumps backward, or forward past the lookahead, restarts playback from the new position the same way Continue does |
 | Timing | Continue waited for the next bar: every Logic cycle loop dropped bar 1, and Continue partway through a bar left the rest of it silent. The Stop–Continue pause also counted as a tick interval | Continue plays the rest of the current bar from the resume point; the last tick is forgotten on Stop |
+| Real-time | Stop and `dispose` silenced only the last destination, so notes could hang on other ports once instruments send to their own port | The client remembers every destination it sends to (fixed array of 16, no allocation) and silences all of them |
 | API | `MIDIInputPortCreate`, `MIDISend` and `MIDIPacketList` are to-be-deprecated | Input uses `MIDIInputPortCreateWithProtocol` with a receive block; output uses `MIDIEventList` and `MIDISendEventList`. MIDI 1.0 bytes are converted to Universal MIDI Packets (`RCoreMidi::UniversalPacket.words_for`), including multi-packet SysEx |
 | Lifetime | Whether `MIDIPortDispose` waits for an in-flight read was undocumented | The clock state lives outside the Ruby object. It is freed one second after the port is disposed, and only once no receive call is in progress |
 | Devices | `Device.all` was cached for the life of the process | The shared MIDI client runs on its own run-loop thread so CoreMIDI can deliver setup notifications. Any setup or property change rebuilds the list on the next call |
 
 ## Verification
 
-- Ruby 4.0.9: the full suite (104 examples) passes.
+- Ruby 4.0.9: the full suite (149 examples) passes.
 - Driver specs (`spec/ext`) cover:
   - tick delivery, stop, `Thread#kill`, `Thread#wakeup`, handler errors and restart, and GC compaction;
   - validation, the UMP encoding (channel voice, system, SysEx, invalid input) and device lookups;

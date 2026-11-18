@@ -9,8 +9,8 @@ module RCoreMidi
     MINIMUM_CLOCK_INTERVAL_NANOSECONDS = 2_000_000
     NANOSECONDS_PER_MINUTE = 60_000_000_000.0
 
-    ScheduledNote = Struct.new(:on, :on_timestamp, :off, :off_timestamp)
-    PendingNote = Struct.new(:on, :on_tick, :off, :off_tick)
+    ScheduledNote = Struct.new(:on, :on_timestamp, :off, :off_timestamp, :destination)
+    PendingNote = Struct.new(:on, :on_tick, :off, :off_tick, :destination)
 
     attr_accessor :midi_in, :midi_out
 
@@ -69,7 +69,7 @@ module RCoreMidi
       first_tick = first_tick_of(bar)
       notes = notes_for_bar(bar).map do |note|
         PendingNote.new(note.on, first_tick + ticks_in(note.on_timestamp),
-                        note.off, first_tick + ticks_in(note.off_timestamp))
+                        note.off, first_tick + ticks_in(note.off_timestamp), note.destination)
       end
       self.pending_notes = (pending_notes + notes).sort_by(&:on_tick)
       self.prepared_bar = bar
@@ -84,10 +84,9 @@ module RCoreMidi
     end
 
     def send_due_notes(tick, host_time)
-      due_notes = take_due_notes(tick)
-      return if due_notes.empty?
-
-      send_packets(midi_out, due_notes.map { |note| timed_from(tick, note) }, host_time)
+      take_due_notes(tick).group_by { |note| note.destination || midi_out }.each do |destination, notes|
+        send_packets(destination, notes.map { |note| timed_from(tick, note) }, host_time)
+      end
     end
 
     def take_due_notes(tick)

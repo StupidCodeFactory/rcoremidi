@@ -23,13 +23,13 @@ module RCoreMidi
       @key = Musicalism::Key.coerce(name)
     end
 
-    def note(pitch_or_degree, beat_resolution, probabilities)
-      rythm_sequences << RythmSequence.new(pitch_name(pitch_or_degree), beat_resolution, probabilities)
+    def note(pitch_or_degree, beat_resolution, probabilities, velocity: nil)
+      rythm_sequences << RythmSequence.new(pitch_name(pitch_or_degree), beat_resolution, probabilities, velocity)
     end
 
-    def chord(chord_or_numeral, beat_resolution, probabilities, inversion: 0)
+    def chord(chord_or_numeral, beat_resolution, probabilities, inversion: 0, velocity: nil)
       chord = musicalism_chord(chord_or_numeral, inversion)
-      rythm_sequences << RythmSequence.new(pitch_names(chord), beat_resolution, probabilities)
+      rythm_sequences << RythmSequence.new(pitch_names(chord), beat_resolution, probabilities, velocity)
     end
 
     def modulate(to:, via: nil, beat_resolution: 16, rhythm: CHORD_ON_FIRST_STEP, voice_leading: true)

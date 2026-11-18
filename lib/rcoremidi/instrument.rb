@@ -7,14 +7,15 @@ module RCoreMidi
 
     attr_reader :name
 
-    def initialize(name, channel, &block)
-      self.name    = name
-      self.channel = channel
-      self.block   = block
+    def initialize(name, channel, output: nil, &block)
+      self.name        = name
+      self.channel     = channel
+      self.block       = block
+      self.destination = Destination.named(output) if output
     end
 
     def generate_bar(bar)
-      track.generate(bar)
+      track.generate(bar).each { |note| note.destination = destination }
     end
 
     def log(msg)
@@ -44,7 +45,7 @@ module RCoreMidi
 
     private
 
-    attr_accessor :channel, :file, :block
+    attr_accessor :channel, :file, :block, :destination
     attr_writer :tracks, :name
 
     def track

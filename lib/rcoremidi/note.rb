@@ -2,13 +2,14 @@ require 'musicalism'
 
 module RCoreMidi
   class Note
-    attr_accessor :note, :velocity, :channel, :status_byte, :on_timestamp, :off_timestamp
+    attr_accessor :note, :velocity, :channel, :status_byte, :on_timestamp, :off_timestamp, :destination
     private :note=, :velocity=, :channel=, :status_byte=, :on_timestamp=
 
     NOTE_ON  = 0x90
     NOTE_OFF = 0x80
+    DEFAULT_VELOCITY = 90
 
-    def initialize(name, on_timestamp = nil, off_timestamp = nil, channel = 0, velocity = 90)
+    def initialize(name, on_timestamp = nil, off_timestamp = nil, channel = 0, velocity = DEFAULT_VELOCITY)
       validate!(name)
       self.note          = Musicalism::Note.new(name[0..-2], name[-1].to_i)
       self.velocity      = velocity

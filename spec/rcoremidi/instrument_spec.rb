@@ -39,6 +39,23 @@ RSpec.describe RCoreMidi::Instrument do
     end
   end
 
+  describe 'sending to its own output' do
+    let(:port) { instance_double(RCoreMidi::Destination) }
+
+    before { allow(RCoreMidi::Destination).to receive(:named).with('Port 1').and_return(port) }
+    after { described_class.instance_variable_get(:@registry).delete(:modular) }
+
+    it 'tags every note it plays with its output' do
+      described_class.register(:modular, 9, output: 'Port 1') { play 1, :drum }
+
+      expect(described_class[:modular].generate_bar(1)).to all(have_attributes(destination: port))
+    end
+
+    it 'leaves notes without an output when it has none' do
+      expect(subject.tap(&:load).generate_bar(1)).to all(have_attributes(destination: nil))
+    end
+  end
+
   describe 'public API' do
     before do
       allow(subject).to receive(:track).and_return(track)
@@ -64,7 +81,7 @@ RSpec.describe RCoreMidi::Instrument do
 
     describe '#generate_bar' do
       it "generates the current bar for the instrument's track" do
-        expect(track).to receive(:generate).with(bar)
+        expect(track).to receive(:generate).with(bar).and_return([])
 
         subject.generate_bar(bar)
       end

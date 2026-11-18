@@ -32,6 +32,20 @@ RSpec.describe RCoreMidi::RythmSequence do
     end
   end
 
+  describe '#generate with a velocity lane' do
+    let(:notes) { described_class.new('C4', beat_resolution, [1, 1, 0, 1], [127, 40]).generate(false, channel) }
+
+    it 'reads the velocity of each step from the lane, wrapping when it is shorter' do
+      expect(notes.map { |note| note.on[2] }).to eq([127, 40, 40])
+    end
+  end
+
+  describe '#generate without a velocity lane' do
+    it 'plays every note at the default velocity' do
+      expect(subject.generate(false, channel).map { |note| note.on[2] }).to all(eq(90))
+    end
+  end
+
   describe '#generate' do
     let(:random_generator)     { double(RCoreMidi::ProbabilityGenerator) }
     let(:not_random_generator) { double(RCoreMidi::ProbabilityGenerator) }
