@@ -22,15 +22,15 @@ module RCoreMidi
 
     def on_continue
       self.playing = true
-      self.pending_notes = []
       self.prepared_bar = nil
     end
 
     def on_tick(tick, host_time)
+      position_moved = position_moved?(tick)
       measure_tick_period(tick, host_time)
       return unless playing
 
-      resume_at(tick) unless prepared_bar
+      resume_at(tick) if position_moved || prepared_bar.nil?
       prepare_bar(prepared_bar + 1) while bar_at(tick + BAR_PREPARATION_TICKS) > prepared_bar
       send_due_notes(tick, host_time)
     end
@@ -55,7 +55,12 @@ module RCoreMidi
     attr_accessor :playing, :prepared_bar, :pending_notes, :last_tick, :last_tick_host_time, :last_interval,
                   :tick_period
 
+    def position_moved?(tick)
+      last_tick && !(last_tick + 1..last_tick + NOTE_LOOKAHEAD_TICKS + 1).cover?(tick)
+    end
+
     def resume_at(tick)
+      self.pending_notes = []
       prepare_bar(bar_at(tick))
       pending_notes.reject! { |note| note.on_tick < tick }
     end

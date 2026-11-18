@@ -113,6 +113,27 @@ RSpec.describe RCoreMidi::Client do
     end
   end
 
+  describe 'moving the song position while playing' do
+    before do
+      client.on_start(start_time)
+      play_ticks(0..80)
+      sent.clear
+    end
+
+    it 'plays from the new position when jumping forward' do
+      play_ticks(400..405)
+
+      expect(live).not_to have_received(:generate_beats).with(bar: 3)
+      expect(sent).to eq([[[second_beat_sent_three_ticks_ahead], host_time_of(405)]])
+    end
+
+    it 'plays from the new position when jumping back' do
+      play_ticks(16..21)
+
+      expect(sent).to eq([[[second_beat_sent_three_ticks_ahead], host_time_of(21)]])
+    end
+  end
+
   describe '#on_continue' do
     before do
       client.on_start(start_time)

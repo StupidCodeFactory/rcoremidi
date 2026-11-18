@@ -37,6 +37,8 @@ How MIDI clock reaches Ruby, and how notes go back out, in the C extension (`ext
               │  the latest clock and the measured tick period
               │  Continue plays the rest of the current bar from the
               │  resume point, skipping notes already in the past
+              │  a Song Position jump while playing restarts the same
+              │  way from the new position
               ▼
  send_packets(destination, notes, base_host_time)
               │  validates bytes and timestamps, converts MIDI 1.0 bytes

@@ -40,6 +40,7 @@ See `MIDI_FLOW_DIAGRAM.md`. The CFMessagePort and CFRunLoop hand-off from the 20
 | Timing | A tempo changed while stopped was ignored for the first bar after Continue (Logic: up to 320 ms off) | The measured tempo is forgotten on Stop and re-measured from the first clocks after Continue |
 | Timing | Logic follows Continue with a burst of 4–6 clocks a fraction of a microsecond apart, then a shortened gap. Those intervals read as an absurdly fast tempo, so notes fired at once (Logic: up to 100 ms early) with the note-off almost at the same instant | An interval counts only when it and the previous interval are both at least 2 ms (`MINIMUM_CLOCK_INTERVAL_NANOSECONDS`, about 1250 bpm) |
 | Timing | Bar 1 was anchored to the Start message, not to the first clock after it | Bar 1 is generated on Start and its downbeat sent on the first clock (tick 0), anchored to that clock's timestamp |
+| Timing | A Song Position sent while playing, with no Stop first, made the tick jump. Jumping forward generated every bar in between and sent their past notes at once; jumping back left the clock silent until it caught up | A tick that jumps backward, or forward past the lookahead, restarts playback from the new position the same way Continue does |
 | Timing | Continue waited for the next bar: every Logic cycle loop dropped bar 1, and Continue partway through a bar left the rest of it silent. The Stop–Continue pause also counted as a tick interval | Continue plays the rest of the current bar from the resume point; the last tick is forgotten on Stop |
 | API | `MIDIInputPortCreate`, `MIDISend` and `MIDIPacketList` are to-be-deprecated | Input uses `MIDIInputPortCreateWithProtocol` with a receive block; output uses `MIDIEventList` and `MIDISendEventList`. MIDI 1.0 bytes are converted to Universal MIDI Packets (`RCoreMidi::UniversalPacket.words_for`), including multi-packet SysEx |
 | Lifetime | Whether `MIDIPortDispose` waits for an in-flight read was undocumented | The clock state lives outside the Ruby object. It is freed one second after the port is disposed, and only once no receive call is in progress |
@@ -47,7 +48,7 @@ See `MIDI_FLOW_DIAGRAM.md`. The CFMessagePort and CFRunLoop hand-off from the 20
 
 ## Verification
 
-- Ruby 4.0.9: the full suite (96 examples) passes on 6 seeds.
+- Ruby 4.0.9: the full suite (104 examples) passes.
 - Driver specs (`spec/ext`) cover:
   - tick delivery, stop, `Thread#kill`, `Thread#wakeup`, handler errors and restart, and GC compaction;
   - validation, the UMP encoding (channel voice, system, SysEx, invalid input) and device lookups;
@@ -68,4 +69,4 @@ See `MIDI_FLOW_DIAGRAM.md`. The CFMessagePort and CFRunLoop hand-off from the 20
 - After Continue, notes of the current bar that fall before the resume point are skipped, not played late.
 - When Stop lands exactly on a bar line, that bar's downbeat notes have already been sent; All Notes Off cuts them within 1 ms.
 - `NOTE_LOOKAHEAD_TICKS` (3) and `TICK_PERIOD_SMOOTHING` (4) in `lib/rcoremidi/client.rb` trade tempo-change response against tolerance for Ruby pauses and clock jitter. A jittery hardware clock may need more smoothing.
-- Live check against Logic Pro over the IAC bus: steady-tempo notes within 0.25 ms of the clock; clock messages delivered within 0.8 ms.
+- Live check against Logic Pro over the IAC bus (`script/clock_lab`): every note within 1.2 ms of its clock tick across 66–228 bpm, tempo changes, cycle loops and three Continues partway through a bar. Only Logic has been checked.
