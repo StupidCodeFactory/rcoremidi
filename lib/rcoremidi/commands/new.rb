@@ -13,15 +13,16 @@ module RCoreMidi
       LIVE        = 'live.rb'.freeze
       CLIP        = 'clip.rb'
       INSTRUMENT  = 'instrument.rb'
+      GEMFILE     = 'Gemfile'.freeze
 
       def self.source_root
         File.expand_path('templates', File.dirname(__FILE__))
       end
 
-      argument :name, type: :string
+      argument :app_path, type: :string
 
       def create_dirs
-        self.destination_root = "#{name}"
+        self.destination_root = app_path
         in_root do
           RCoreMidi::CLI::DIRS.each do |dir|
             empty_directory dir
@@ -45,6 +46,10 @@ module RCoreMidi
         template "config/#{CONNECTIONS}"
       end
 
+      def create_gemfile
+        template GEMFILE
+      end
+
       def bin
         chmod 'bin', 0o755 & ~File.umask, verbose: false
       end
@@ -61,6 +66,18 @@ module RCoreMidi
       private
 
       attr_accessor :application_name
+
+      def name
+        File.basename(app_path)
+      end
+
+      def rcoremidi_path
+        File.expand_path('../../..', __dir__)
+      end
+
+      def musicalism_path
+        Gem.loaded_specs.fetch('musicalism').full_gem_path
+      end
 
       def devices
         @devices ||= Device.all

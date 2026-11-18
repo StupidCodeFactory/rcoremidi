@@ -1,3 +1,3 @@
 RCoreMidi::Instrument.register :<%= name %>, <%= midi_channel %> do
-  #note 'E5', [1, 0, 0, 0] * 4
+  #play 1..1000, :<%= name %>
 end
