@@ -26,6 +26,7 @@ enum {
   kClockQueueCapacity = 1024,
   kMaxMIDIMessageLength = 256,
   kMIDIChannels = 16,
+  kMaxRememberedDestinations = 16,
   kUniversalSystemMessage = 0x1,
   kUniversalMIDI1ChannelVoice = 0x2
 };
@@ -60,7 +61,8 @@ typedef struct RCoremidiNode {
   bool disposed;
   bool running;
   atomic_bool stop_requested;
-  MIDIEndpointRef last_destination;
+  MIDIEndpointRef destinations[kMaxRememberedDestinations];
+  int destination_count;
   ClockInput *clock;
 } RCoremidiNode;
 
@@ -210,17 +212,35 @@ static void send_words_now(MIDIPortRef port, MIDIEndpointRef destination,
   MIDISendEventList(port, destination, event_list);
 }
 
-static void silence_last_destination(RCoremidiNode *node) {
-  if (!node->ports_created || node->disposed || !node->last_destination) {
-    return;
-  }
-  MIDIFlushOutput(node->last_destination);
+static void silence_destination(MIDIPortRef port, MIDIEndpointRef destination) {
+  MIDIFlushOutput(destination);
   UInt32 words[kMIDIChannels * 2];
   for (int channel = 0; channel < kMIDIChannels; ++channel) {
     words[channel * 2] = control_change_word(channel, kMIDIAllSoundOff);
     words[channel * 2 + 1] = control_change_word(channel, kMIDIAllNotesOff);
   }
-  send_words_now(node->out, node->last_destination, words, kMIDIChannels * 2);
+  send_words_now(port, destination, words, kMIDIChannels * 2);
+}
+
+static void silence_destinations(RCoremidiNode *node) {
+  if (!node->ports_created || node->disposed) {
+    return;
+  }
+  for (int i = 0; i < node->destination_count; ++i) {
+    silence_destination(node->out, node->destinations[i]);
+  }
+}
+
+static void remember_destination(RCoremidiNode *node,
+                                 MIDIEndpointRef destination) {
+  for (int i = 0; i < node->destination_count; ++i) {
+    if (node->destinations[i] == destination) {
+      return;
+    }
+  }
+  if (node->destination_count < kMaxRememberedDestinations) {
+    node->destinations[node->destination_count++] = destination;
+  }
 }
 
 static void dispose_ports(RCoremidiNode *node) {
@@ -228,7 +248,7 @@ static void dispose_ports(RCoremidiNode *node) {
     return;
   }
   atomic_store_explicit(&node->clock->listening, false, memory_order_release);
-  silence_last_destination(node);
+  silence_destinations(node);
   MIDIPortDispose(node->in);
   MIDIPortDispose(node->out);
   node->disposed = true;
@@ -371,7 +391,7 @@ VALUE client_running(VALUE self) {
 }
 
 VALUE silence_client(VALUE self) {
-  silence_last_destination(usable_client_node(self));
+  silence_destinations(usable_client_node(self));
   return Qnil;
 }
 
@@ -495,7 +515,7 @@ VALUE send_packets(int argc, VALUE *argv, VALUE self) {
   MIDIEventList *event_list = ALLOCV(event_list_owner, kEventListCapacity);
   fill_event_list(event_list, messages, message_count);
   OSStatus status = MIDISendEventList(node->out, endpoint, event_list);
-  node->last_destination = endpoint;
+  remember_destination(node, endpoint);
 
   ALLOCV_END(event_list_owner);
   ALLOCV_END(messages_owner);

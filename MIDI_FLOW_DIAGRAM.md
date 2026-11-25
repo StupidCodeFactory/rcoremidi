@@ -44,4 +44,4 @@ The shared CoreMIDI client lives on a dedicated run-loop thread, so setup notifi
 - Ruby code only ever runs on the thread that called `start`, with the GVL held and no CoreFoundation frames on the stack, so exceptions unwind normally.
 - `start` returns when `stop` or `dispose` is called. Exceptions raised in a handler, Ctrl-C and `Thread#kill` propagate out of `start`. Signals with a trap handler and `Thread#wakeup` do not stop the clock.
 - Clock messages received while the clock is not running are ignored. If Ruby falls more than 1024 events behind, new events are dropped and counted in `dropped_clock_events`.
-- `silence` unschedules pending packets and sends All Sound Off and All Notes Off on all 16 channels of the last destination. The base `on_stop` does nothing; a subclass that schedules ahead should call `silence` from it.
+- `silence` unschedules pending packets and sends All Sound Off and All Notes Off on all 16 channels of every destination the client has sent to (up to 16). `dispose` does the same. The base `on_stop` does nothing; a subclass that schedules ahead should call `silence` from it.
