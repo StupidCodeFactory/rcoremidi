@@ -9,7 +9,8 @@ module RCoreMidi
       let(:destination) { entity.endpoints.detect { |e| e.is_a? Destination } }
       let(:source)      { entity.endpoints.detect { |e| e.is_a? Source } }
       let(:client)      { Client.new('ruby_client') }
-      let(:midi_event)  { Struct.new(:on, :on_timestamp, :off, :off_timestamp) }
+      let(:midi_event)  { Client::TimedNote }
+      let(:note)        { midi_event.new([0x90, 60, 100], 0, [0x80, 60, 0], 0) }
       let(:one_millisecond) { 1_000_000 }
       let(:clock_start_then_tick) { midi_event.new([0xFA], 0, [0xF8], one_millisecond) }
       let(:clock_stop) { midi_event.new([0xFC], 2 * one_millisecond, [0xF8], 3 * one_millisecond) }
@@ -49,11 +50,11 @@ module RCoreMidi
         before { client.connect_to(source) }
 
         it 'sends the note on and note off packets' do
-          expect { client.send_packets(destination, [Note.new('C3', 0, 0, 0)]) }.not_to raise_error
+          expect { client.send_packets(destination, [note]) }.not_to raise_error
         end
 
         it 'schedules from a given host time' do
-          expect { client.send_packets(destination, [Note.new('C3', 0, 0, 0)], 0) }.not_to raise_error
+          expect { client.send_packets(destination, [note], 0) }.not_to raise_error
         end
 
         it 'rejects a MIDI message longer than a packet can hold' do
@@ -148,16 +149,16 @@ module RCoreMidi
         end
 
         it 'raises errors from the Ruby clock handlers in the starting thread' do
-          client.define_singleton_method(:on_start) { |_host_time| raise ArgumentError, 'bad clip' }
+          client.define_singleton_method(:on_start) { |_host_time| raise ArgumentError, 'bad handler' }
           runner = start_clock_thread
           runner.report_on_exception = false
           client.send_packets(destination, [clock_start_then_tick])
 
-          expect { runner.join(2) }.to raise_error(ArgumentError, 'bad clip')
+          expect { runner.join(2) }.to raise_error(ArgumentError, 'bad handler')
         end
 
         it 'can start again after a handler error' do
-          client.define_singleton_method(:on_start) { |_host_time| raise ArgumentError, 'bad clip' }
+          client.define_singleton_method(:on_start) { |_host_time| raise ArgumentError, 'bad handler' }
           runner = start_clock_thread
           runner.report_on_exception = false
           client.send_packets(destination, [clock_start_then_tick])

@@ -1,3 +1,0 @@
-- name: <%= client_name %>
-  midi_in: <%= midi_in.uid %>
-  midi_out: <%= midi_out.uid %>
