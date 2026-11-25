@@ -1,8 +1,0 @@
-#!/usr/bin/env ruby
-
-require 'bundler'
-require 'bundler/setup'
-require 'rcoremidi/cli'
-
-APP_PATH = File.join(File.expand_path(File.join(__dir__, '..')))
-RCoreMidi::CLI.start(ARGV)
