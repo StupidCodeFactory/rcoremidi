@@ -1,3 +1,17 @@
+=== 0.1.0 2026-11-25
+
+* Driver-only release.
+  * The live coding layer (Live, Application, clips, instruments, the arcx
+    CLI and bar scheduling) moved to the archaeopteryx gem:
+    https://github.com/StupidCodeFactory/archaeopteryx
+  * RCoreMidi::Client is a driver base class with no-op on_start, on_tick,
+    on_stop and on_continue hooks, connect!, TICKS_PER_QUARTER and
+    Client::TimedNote, the note shape send_packets reads.
+  * Clock events are delivered from a lock-free ring buffer with the GVL
+    released while waiting; notes are sent as Universal MIDI Packets with
+    MIDISendEventList.
+  * No runtime gem dependencies.
+
 === 0.0.1 2010-05-19
 
 * 1 major enhancement:

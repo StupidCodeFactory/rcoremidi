@@ -1,6 +1,8 @@
 *.[o]
 *.bundle
-ext/rcormidi/Makefile
+ext/rcoremidi/Makefile
+*.gem
+pkg/
 tmp*
 .emacs*
 TAGS
