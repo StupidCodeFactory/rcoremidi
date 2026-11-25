@@ -11,7 +11,7 @@ module RCoreMidi
   # * <tt>send_packets(destination, notes, base_host_time = now)</tt>: schedule
   #   each note (see TimedNote) relative to +base_host_time+
   # * <tt>silence</tt>: unschedule pending packets and send All Sound Off and
-  #   All Notes Off on all 16 channels of the last destination
+  #   All Notes Off on all 16 channels of every destination sent to (up to 16)
   # * <tt>dropped_clock_events</tt>: clock events lost because Ruby fell behind
   #
   # This class adds the Ruby side: endpoints to work with and no-op hooks that

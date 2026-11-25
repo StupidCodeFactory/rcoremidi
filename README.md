@@ -41,7 +41,7 @@ RCoreMidi::Device.all.each do |device|
 end
 ```
 
-`Device.all` is rebuilt after any CoreMIDI setup change. Each `Entity` has `endpoints`, split into `sources` (MIDI in) and `destinations` (MIDI out).
+`Device.all` is rebuilt after any CoreMIDI setup change. Each `Entity` has `endpoints`, split into `sources` (MIDI in) and `destinations` (MIDI out). `RCoreMidi::Destination.named('Port 1')` finds a destination by name across all devices, and raises if none or several match.
 
 ## Following a clock and sending notes
 
@@ -89,7 +89,7 @@ ensure
 end
 ```
 
-Other driver methods: `stop`, `running?`, `silence` (unschedule pending packets and send All Notes Off on all channels of the last destination), `dropped_clock_events` and `dispose`. `RCoreMidi::HostTime.now`, `.to_nanoseconds` and `.from_nanoseconds` convert CoreMIDI host times.
+Other driver methods: `stop`, `running?`, `silence` (unschedule pending packets and send All Notes Off on all channels of every destination it has sent to), `dropped_clock_events` and `dispose`. `RCoreMidi::HostTime.now`, `.to_nanoseconds` and `.from_nanoseconds` convert CoreMIDI host times.
 
 See [MIDI_FLOW_DIAGRAM.md](MIDI_FLOW_DIAGRAM.md) for how clock events reach Ruby and [C_EXTENSION_CODE_REVIEW.md](C_EXTENSION_CODE_REVIEW.md) for notes on the extension's design.
 
