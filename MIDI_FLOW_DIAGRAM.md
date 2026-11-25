@@ -1,6 +1,6 @@
 # MIDI Message Flow
 
-How MIDI clock reaches Ruby, and how notes go back out, in the C extension (`ext/rcoremidi/client.c`) and `RCoreMidi::Client` (`lib/rcoremidi/client.rb`).
+How MIDI clock reaches Ruby, and how notes go back out, in the C extension (`ext/rcoremidi/client.c`) and the Ruby hooks of `RCoreMidi::Client` (`lib/rcoremidi/client.rb`).
 
 ```
  MIDI master (DAW, drum machine)
@@ -19,24 +19,14 @@ How MIDI clock reaches Ruby, and how notes go back out, in the C extension (`ext
               │  re-acquires the GVL, drains the ring buffer and calls:
               │     on_start(host_time)
               │     on_tick(tick, host_time)
-              │     on_stop / on_continue   (only if defined)
+              │     on_stop / on_continue
               │  then runs pending interrupts (traps, Ctrl-C, Thread#kill)
               ▼
- RCoreMidi::Client
-              │  measures the tick period from the clock host times
-              │  (forgotten on Stop, so a tempo change while stopped
-              │  is picked up from the first clocks after Continue)
-              │  counts an interval only when it and the previous one
-              │  are at least 2 ms, so the catch-up clocks a DAW sends
-              │  with Continue and the shortened gap after them are
-              │  ignored
-              │  on Start, generates bar 1; one beat (24 ticks) before
-              │  each later bar, generates it
-              │  converts each note's offset into a clock position
-              │  sends each note 3 ticks before its position, timed from
-              │  the latest clock and the measured tick period
-              │  Continue plays the rest of the current bar from the
-              │  resume point, skipping notes already in the past
+ Your RCoreMidi::Client subclass
+              │  decides what to play (the base class hooks are no-ops;
+              │  archaeopteryx's scheduler is one such subclass)
+              │  calls send_packets with TimedNotes timed from the
+              │  latest clock's host time
               ▼
  send_packets(destination, notes, base_host_time)
               │  validates bytes and timestamps, converts MIDI 1.0 bytes
@@ -54,4 +44,4 @@ The shared CoreMIDI client lives on a dedicated run-loop thread, so setup notifi
 - Ruby code only ever runs on the thread that called `start`, with the GVL held and no CoreFoundation frames on the stack, so exceptions unwind normally.
 - `start` returns when `stop` or `dispose` is called. Exceptions raised in a handler, Ctrl-C and `Thread#kill` propagate out of `start`. Signals with a trap handler and `Thread#wakeup` do not stop the clock.
 - Clock messages received while the clock is not running are ignored. If Ruby falls more than 1024 events behind, new events are dropped and counted in `dropped_clock_events`.
-- `on_stop` calls `silence`, which unschedules pending packets and sends All Sound Off and All Notes Off on all 16 channels of the last destination.
+- `silence` unschedules pending packets and sends All Sound Off and All Notes Off on all 16 channels of the last destination. The base `on_stop` does nothing; a subclass that schedules ahead should call `silence` from it.
